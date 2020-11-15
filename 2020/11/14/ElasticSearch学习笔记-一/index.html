@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+
+  
+  <title>ElasticSearch学习笔记(一)：Get Started与复合查询 | 多模型自适应混子的技术老巢</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="学习任意一种工具，我个人习惯是先看官方文档，因此学习ElasticSearch也是一样的，但是由于ES的中文版本比较低，所以我的学习主要借鉴的是官方英文文档中ES7.10X的版本，因此笔记中出现的某些列子也都是官方文档中标注的。该篇文章仅仅是对ES的使用做一些简要的介绍。   Get Started  建立Index  通过PUT请求特定的index 1234PUT &#x2F;customer&#x2F;_doc&#x2F;">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ElasticSearch学习笔记(一)：Get Started与复合查询">
+<meta property="og:url" content="http://example.com/2020/11/14/ElasticSearch%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-%E4%B8%80/index.html">
+<meta property="og:site_name" content="多模型自适应混子的技术老巢">
+<meta property="og:description" content="学习任意一种工具，我个人习惯是先看官方文档，因此学习ElasticSearch也是一样的，但是由于ES的中文版本比较低，所以我的学习主要借鉴的是官方英文文档中ES7.10X的版本，因此笔记中出现的某些列子也都是官方文档中标注的。该篇文章仅仅是对ES的使用做一些简要的介绍。   Get Started  建立Index  通过PUT请求特定的index 1234PUT &#x2F;customer&#x2F;_doc&#x2F;">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2020-11-14T08:02:14.000Z">
+<meta property="article:modified_time" content="2020-11-15T13:04:42.892Z">
+<meta property="article:author" content="Larry Young">
+<meta name="twitter:card" content="summary">
+  
+    <link rel="alternate" href="/atom.xml" title="多模型自适应混子的技术老巢" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+<meta name="generator" content="Hexo 5.2.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">多模型自适应混子的技术老巢</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-ElasticSearch学习笔记-一" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/11/14/ElasticSearch%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-%E4%B8%80/" class="article-date">
+  <time datetime="2020-11-14T08:02:14.000Z" itemprop="datePublished">2020-11-14</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      ElasticSearch学习笔记(一)：Get Started与复合查询
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>学习任意一种工具，我个人习惯是先看官方文档，因此学习ElasticSearch也是一样的，但是由于ES的中文版本比较低，所以我的学习主要借鉴的是官方英文文档中ES<code>7.10X</code>的版本，因此笔记中出现的某些列子也都是官方文档中标注的。该篇文章仅仅是对ES的使用做一些简要的介绍。</p>
+<hr>
+<ul>
+<li><p><strong>Get Started</strong></p>
+<ul>
+<li><p>建立Index</p>
+<ul>
+<li><p>通过<code>PUT</code>请求特定的index</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">PUT /customer/_doc/1</span><br><span class="line">&#123;</span><br><span class="line">    <span class="attr">&quot;name&quot;</span> : <span class="string">&quot;YoungLH&quot;</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果customer这个Index库不存在的话，那么ES会自动帮助你创建这个Index，并且按照上面的命令会创建一条ID为1的document。</p>
+</li>
+</ul>
+</li>
+<li><p>搜索操作</p>
+<p>在建立了Index之后我们就可以开始去搜索相应的Index内的document数据，这时候我们会利用<code>GET</code>请求，并配合相应的<code>_search</code>字段，而在请求内部就可以利用ES的查询DSL语言去构建查询条件</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">GET /customer/_search</span><br><span class="line">&#123;</span><br><span class="line">    <span class="attr">&quot;query&quot;</span> : &#123;</span><br><span class="line">        match_all : &#123;&#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    &quot;sort&quot; : [</span><br><span class="line">        &#123;<span class="attr">&quot;account_num&quot;</span> : <span class="string">&quot;asc&quot;</span>&#125;</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>查询之后返回的相应体内<code>hits</code>字段内就包含满足条件的数据。</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  <span class="attr">&quot;took&quot;</span> : <span class="number">63</span>,</span><br><span class="line">  <span class="attr">&quot;timed_out&quot;</span> : <span class="literal">false</span>,</span><br><span class="line">  <span class="attr">&quot;_shards&quot;</span> : &#123;</span><br><span class="line">    <span class="attr">&quot;total&quot;</span> : <span class="number">5</span>,</span><br><span class="line">    <span class="attr">&quot;successful&quot;</span> : <span class="number">5</span>,</span><br><span class="line">    <span class="attr">&quot;skipped&quot;</span> : <span class="number">0</span>,</span><br><span class="line">    <span class="attr">&quot;failed&quot;</span> : <span class="number">0</span></span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="attr">&quot;hits&quot;</span> : &#123;</span><br><span class="line">    <span class="attr">&quot;total&quot;</span> : &#123;</span><br><span class="line">        <span class="attr">&quot;value&quot;</span>: <span class="number">1000</span>,</span><br><span class="line">        <span class="attr">&quot;relation&quot;</span>: <span class="string">&quot;eq&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="attr">&quot;max_score&quot;</span> : <span class="literal">null</span>,</span><br><span class="line">    <span class="attr">&quot;hits&quot;</span> : [ &#123;</span><br><span class="line">      <span class="attr">&quot;_index&quot;</span> : <span class="string">&quot;bank&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;_type&quot;</span> : <span class="string">&quot;_doc&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;_id&quot;</span> : <span class="string">&quot;0&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;sort&quot;</span>: [<span class="number">0</span>],</span><br><span class="line">      <span class="attr">&quot;_score&quot;</span> : <span class="literal">null</span>,</span><br><span class="line">      <span class="attr">&quot;_source&quot;</span> : &#123;<span class="attr">&quot;account_number&quot;</span>:<span class="number">0</span>,<span class="attr">&quot;balance&quot;</span>:<span class="number">16623</span>,<span class="attr">&quot;firstname&quot;</span>:<span class="string">&quot;Bradshaw&quot;</span>,<span class="attr">&quot;lastname&quot;</span>:<span class="string">&quot;Mckenzie&quot;</span>,<span class="attr">&quot;age&quot;</span>:<span class="number">29</span>,<span class="attr">&quot;gender&quot;</span>:<span class="string">&quot;F&quot;</span>,<span class="attr">&quot;address&quot;</span>:<span class="string">&quot;244 Columbus Place&quot;</span>,<span class="attr">&quot;employer&quot;</span>:<span class="string">&quot;Euron&quot;</span>,<span class="attr">&quot;email&quot;</span>:<span class="string">&quot;bradshawmckenzie@euron.com&quot;</span>,<span class="attr">&quot;city&quot;</span>:<span class="string">&quot;Hobucken&quot;</span>,<span class="attr">&quot;state&quot;</span>:<span class="string">&quot;CO&quot;</span>&#125;</span><br><span class="line">    &#125;, &#123;</span><br><span class="line">      <span class="attr">&quot;_index&quot;</span> : <span class="string">&quot;bank&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;_type&quot;</span> : <span class="string">&quot;_doc&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;_id&quot;</span> : <span class="string">&quot;1&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;sort&quot;</span>: [<span class="number">1</span>],</span><br><span class="line">      <span class="attr">&quot;_score&quot;</span> : <span class="literal">null</span>,</span><br><span class="line">      <span class="attr">&quot;_source&quot;</span> : &#123;<span class="attr">&quot;account_number&quot;</span>:<span class="number">1</span>,<span class="attr">&quot;balance&quot;</span>:<span class="number">39225</span>,<span class="attr">&quot;firstname&quot;</span>:<span class="string">&quot;Amber&quot;</span>,<span class="attr">&quot;lastname&quot;</span>:<span class="string">&quot;Duke&quot;</span>,<span class="attr">&quot;age&quot;</span>:<span class="number">32</span>,<span class="attr">&quot;gender&quot;</span>:<span class="string">&quot;M&quot;</span>,<span class="attr">&quot;address&quot;</span>:<span class="string">&quot;880 Holmes Lane&quot;</span>,<span class="attr">&quot;employer&quot;</span>:<span class="string">&quot;Pyrami&quot;</span>,<span class="attr">&quot;email&quot;</span>:<span class="string">&quot;amberduke@pyrami.com&quot;</span>,<span class="attr">&quot;city&quot;</span>:<span class="string">&quot;Brogan&quot;</span>,<span class="attr">&quot;state&quot;</span>:<span class="string">&quot;IL&quot;</span>&#125;</span><br><span class="line">    &#125;, ...</span><br><span class="line">    ]</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>除了<code>hits</code>字段外，其余的字段分别为：</p>
+<ul>
+<li><p><code>took</code>：这段查询花费了多长时间，单位为毫秒</p>
+</li>
+<li><p><code>time_out</code>：这段查询是不是超时了</p>
+</li>
+<li><p><code>_shards</code>：查询后有多少个分片成功、失败或者是被跳过</p>
+</li>
+<li><p><code>max_score</code>：最匹配的那条document数据的分数</p>
+</li>
+<li><p><code>hits.total.value</code>：有多少个document被找到</p>
+</li>
+<li><p><code>hits.sort</code>：对document的排序</p>
+</li>
+<li><p><code>hits._sort</code>：document的相关度分数（在使用<code>match_all</code>的时候是不起作用的）</p>
+<p>如果说还想用分页查询，那么可以在请求体内加入<code>from</code>和<code>size字段</code></p>
+</li>
+</ul>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">GET /bank/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="attr">&quot;query&quot;</span>: &#123; <span class="attr">&quot;match_all&quot;</span>: &#123;&#125; &#125;,</span><br><span class="line">  <span class="attr">&quot;sort&quot;</span>: [</span><br><span class="line">    &#123; <span class="attr">&quot;account_number&quot;</span>: <span class="string">&quot;asc&quot;</span> &#125;</span><br><span class="line">  ],</span><br><span class="line">  <span class="attr">&quot;from&quot;</span>: <span class="number">10</span>,</span><br><span class="line">  <span class="attr">&quot;size&quot;</span>: <span class="number">10</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>进一步的，如果说想要构建更精准的查询，我们在请求体内就不会继续使用<code>match_all</code>这个字段了。</p>
+<p>为了精确匹配某些字段，我们一般都使用<code>match</code>查询，例如在官方文档中的例子：比如我们要查询的是地址中包含mill或者lane的信息：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">GET /bank/_search</span><br><span class="line">&#123;</span><br><span class="line">    <span class="attr">&quot;query&quot;</span> : &#123;</span><br><span class="line">        <span class="attr">&quot;match&quot;</span> : &#123;</span><br><span class="line">            <span class="attr">&quot;address&quot;</span> : <span class="string">&quot;mill lane&quot;</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>但如果我们要查询的是整个句子而不是单个的单词，我们可以试用<code>match_phrase</code>去匹配</p>
+<p>此外，如果想进一步做复杂查询，我们就可以试用<code>bool</code>查询去包含多个查询条件，一般来说分成must match、should match、must not match</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">GET /bank/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="attr">&quot;query&quot;</span>: &#123;</span><br><span class="line">    <span class="attr">&quot;bool&quot;</span>: &#123;</span><br><span class="line">      <span class="attr">&quot;must&quot;</span>: [</span><br><span class="line">        &#123; <span class="attr">&quot;match&quot;</span>: &#123; <span class="attr">&quot;age&quot;</span>: <span class="string">&quot;40&quot;</span> &#125; &#125;</span><br><span class="line">      ],</span><br><span class="line">      <span class="attr">&quot;must_not&quot;</span>: [</span><br><span class="line">        &#123; <span class="attr">&quot;match&quot;</span>: &#123; <span class="attr">&quot;state&quot;</span>: <span class="string">&quot;ID&quot;</span> &#125; &#125;</span><br><span class="line">      ]</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>同样我们还可以对结果进行过滤</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">GET /bank/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="attr">&quot;query&quot;</span>: &#123;</span><br><span class="line">    <span class="attr">&quot;bool&quot;</span>: &#123;</span><br><span class="line">      <span class="attr">&quot;must&quot;</span>: &#123; <span class="attr">&quot;match_all&quot;</span>: &#123;&#125; &#125;,</span><br><span class="line">      <span class="attr">&quot;filter&quot;</span>: &#123;</span><br><span class="line">        <span class="attr">&quot;range&quot;</span>: &#123;</span><br><span class="line">          <span class="attr">&quot;balance&quot;</span>: &#123;</span><br><span class="line">            <span class="attr">&quot;gte&quot;</span>: <span class="number">20000</span>,</span><br><span class="line">            <span class="attr">&quot;lte&quot;</span>: <span class="number">30000</span></span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+</li>
+</ul>
+</li>
+</ul>
+<hr>
+<ul>
+<li><p><strong>查询DSL语句</strong></p>
+<p>在完成了前面的Get Started之后，我们来看一下官方文档中给出的具体的DSL语句。</p>
+<p>官方文档中给出ES有两种基本的查询：一种是叶子查询子句，另一种是复合查询子句，叶子查询子句是在特定字段中查找特定值，例如使用<code>match</code>，<code>term</code>，<code>range</code>查询。而复合查询子句可以包含其它的叶子查询语句或者复合查询语句，然后将它们用一定的逻辑组合起来，比如使用<code>bool</code>查询或者<code>dis_max</code>查询。具体查询子句做了什么是依据这些子句是在查询上下文中还是说在过滤器上下文中。</p>
+<p>那什么是查询上下文和过滤器上下文呢？</p>
+<p>首先我们要介绍几个概念：</p>
+<ul>
+<li><p>相关度分值</p>
+<p>默认情况下ES对于匹配到的搜索结果进行排序都是依照相关度分值进行的，它体现的是每条document数据和这条查询中匹配的程度。这个分值会存储在<code>_score</code>这个字段中进行返回。同时这个分值的计算归根到底也是依据我们的查询语句是在查询上下文中还是过滤器上下文中。</p>
+</li>
+<li><p>查询上下文</p>
+<p>在查询上下文中，查询子句回答以下问题：“此文档与该查询子句的匹配程度如何？” 除了确定文档是否匹配之外，查询子句还计算<code>_score</code>元数据字段中的相关性得分。</p>
+<p>只要将查询子句传递到查询参数（例如搜索API中的查询参数），查询上下文就有效。</p>
+</li>
+<li><p>过滤器上下文</p>
+<p>在过滤器上下文中，查询子句回答问题“此文档与该查询子句匹配吗？” 答案是简单的“是”或“否”，即不计算分数。 过滤器上下文主要用于过滤结构化数据，例如</p>
+<p>此时间戳记是否在2015年至2016年的范围内？<br>状态字段设置为“已发布”吗？<br>常用的过滤器将由ElasticSearch自动缓存，以提高性能。</p>
+<p>每当将查询子句传递到过滤器参数（例如bool查询中的filter或must_not参数，constant_score查询中的filter参数或过滤器聚合）时，过滤器上下文即生效。</p>
+</li>
+<li><p>例子</p>
+<p>下面我们来看一下官方文档中的例子：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">GET /_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="attr">&quot;query&quot;</span>: &#123; <span class="comment">//1</span></span><br><span class="line">    <span class="attr">&quot;bool&quot;</span>: &#123; <span class="comment">//2</span></span><br><span class="line">      <span class="attr">&quot;must&quot;</span>: [</span><br><span class="line">        &#123; <span class="attr">&quot;match&quot;</span>: &#123; <span class="attr">&quot;title&quot;</span>:   <span class="string">&quot;Search&quot;</span>        &#125;&#125;,</span><br><span class="line">        &#123; <span class="attr">&quot;match&quot;</span>: &#123; <span class="attr">&quot;content&quot;</span>: <span class="string">&quot;Elasticsearch&quot;</span> &#125;&#125;</span><br><span class="line">      ],</span><br><span class="line">      <span class="attr">&quot;filter&quot;</span>: [<span class="comment">//3 </span></span><br><span class="line">        &#123; <span class="attr">&quot;term&quot;</span>:  </span><br><span class="line">         &#123; <span class="attr">&quot;status&quot;</span>: <span class="string">&quot;published&quot;</span> </span><br><span class="line">         &#125;</span><br><span class="line">        &#125;,</span><br><span class="line">        &#123; <span class="attr">&quot;range&quot;</span>: </span><br><span class="line">         &#123; <span class="attr">&quot;publish_date&quot;</span>: </span><br><span class="line">          &#123; <span class="attr">&quot;gte&quot;</span>: <span class="string">&quot;2015-01-01&quot;</span> &#125;</span><br><span class="line">         &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      ]</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li> <code>query</code>字段表示是查询上下文。</li>
+<li> <code>bool</code>和两个<code>match</code>字段是在<code>query</code>字段内使用的，因此这就意味着他们搜索的结果会被计算相关度分值。</li>
+<li> <code>filter</code>字段说明是过滤器上下文，在上面的例子中里面包含了<code>term</code>和<code>range</code>字段，他们就会过滤出那些符合条件的document数据，但是并不会影响上面计算的相关度分值。</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr>
+<ul>
+<li><p>复合查询</p>
+<p>复合查询一般包括以下几种：</p>
+<ul>
+<li><p><code>bool</code>查询</p>
+<p>默认查询，用于组合多个叶子或复合查询子句（<code>must</code>，<code>should</code>，<code>must_not</code>或<code>filter</code>子句）。 must和should子句的分数组合在一起-匹配的子句越多越好-而must_not和filter子句在过滤器上下文中执行。</p>
+</li>
+<li><p><code>boosting</code>查询</p>
+<p>返回与正查询匹配的文档，但减少也与负查询匹配的文档的分数。</p>
+</li>
+<li><p><code>constant_score</code>查询</p>
+<p>它包装另一个查询，但在过滤器上下文中执行它。所有匹配的文档都使用相同的常数_score。</p>
+</li>
+<li><p><code>dis_max</code>查询</p>
+<p>它接受多个查询，并返回与任何查询子句匹配的任何文档。当布尔查询合并所有匹配查询的分数时，dis_max查询使用单个最佳匹配查询子句的分数。</p>
+</li>
+<li><p><code>function_score</code>查询</p>
+<p>这个是使用自己定义的算法进行查询。</p>
+</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li><p><code>bool</code>查询</p>
+<p><code>bool</code>查询中主要包含下面几种字段：</p>
+<ul>
+<li><code>must</code>：查询子句必须包含的字段</li>
+<li><code>filter</code>：这个字段负责过滤，但不会参与到相关度分值的计算</li>
+<li><code>should</code>：或的逻辑</li>
+<li><code>must_not</code>：指定不能出现在查询结果中的字段</li>
+</ul>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">POST _search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="attr">&quot;query&quot;</span>: &#123;</span><br><span class="line">    <span class="attr">&quot;bool&quot;</span> : &#123;</span><br><span class="line">      <span class="attr">&quot;must&quot;</span> : &#123;</span><br><span class="line">        <span class="attr">&quot;term&quot;</span> : &#123; <span class="attr">&quot;user.id&quot;</span> : <span class="string">&quot;kimchy&quot;</span> &#125;</span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="attr">&quot;filter&quot;</span>: &#123;</span><br><span class="line">        <span class="attr">&quot;term&quot;</span> : &#123; <span class="attr">&quot;tags&quot;</span> : <span class="string">&quot;production&quot;</span> &#125;</span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="attr">&quot;must_not&quot;</span> : &#123;</span><br><span class="line">        <span class="attr">&quot;range&quot;</span> : &#123;</span><br><span class="line">          <span class="attr">&quot;age&quot;</span> : &#123; <span class="attr">&quot;gte&quot;</span> : <span class="number">10</span>, <span class="attr">&quot;lte&quot;</span> : <span class="number">20</span> &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="attr">&quot;should&quot;</span> : [</span><br><span class="line">        &#123; <span class="attr">&quot;term&quot;</span> : &#123; <span class="attr">&quot;tags&quot;</span> : <span class="string">&quot;env1&quot;</span> &#125; &#125;,</span><br><span class="line">        &#123; <span class="attr">&quot;term&quot;</span> : &#123; <span class="attr">&quot;tags&quot;</span> : <span class="string">&quot;deployed&quot;</span> &#125; &#125;</span><br><span class="line">      ],</span><br><span class="line">      <span class="attr">&quot;minimum_should_match&quot;</span> : <span class="number">1</span>,</span><br><span class="line">      <span class="attr">&quot;boost&quot;</span> : <span class="number">1.0</span></span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><p>给<code>bool.filter</code>分配score</p>
+<p>首先，我们从前文可以看到，分布在<code>filter</code>标签下的查询语句对于score是没有影响的，也就是说在过滤器上下文下的查询语句返回的相关度分值是0。只有查询语句在精确匹配的前提下才会有score</p>
+</li>
+<li><p><code>named</code>查询</p>
+<p>每个查询都接收一个<code>_name</code>字段，我们可以使用<code>named</code>查询去跟踪哪些查询与返回的结果文档匹配。如果使用了<code>named</code>查询，那么在返回的响应中每一个命中的document都会包含<code>matched_queries</code>这个属性字段。</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">GET /_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="attr">&quot;query&quot;</span>: &#123;</span><br><span class="line">    <span class="attr">&quot;bool&quot;</span>: &#123;</span><br><span class="line">      <span class="attr">&quot;should&quot;</span>: [</span><br><span class="line">        &#123; <span class="attr">&quot;match&quot;</span>: &#123; <span class="attr">&quot;name.first&quot;</span>: &#123; <span class="attr">&quot;query&quot;</span>: <span class="string">&quot;shay&quot;</span>, <span class="attr">&quot;_name&quot;</span>: <span class="string">&quot;first&quot;</span> &#125; &#125; &#125;,</span><br><span class="line">        &#123; <span class="attr">&quot;match&quot;</span>: &#123; <span class="attr">&quot;name.last&quot;</span>: &#123; <span class="attr">&quot;query&quot;</span>: <span class="string">&quot;banon&quot;</span>, <span class="attr">&quot;_name&quot;</span>: <span class="string">&quot;last&quot;</span> &#125; &#125; &#125;</span><br><span class="line">      ],</span><br><span class="line">      <span class="attr">&quot;filter&quot;</span>: &#123;</span><br><span class="line">        <span class="attr">&quot;terms&quot;</span>: &#123;</span><br><span class="line">          <span class="attr">&quot;name.last&quot;</span>: [ <span class="string">&quot;banon&quot;</span>, <span class="string">&quot;kimchy&quot;</span> ],</span><br><span class="line">          <span class="attr">&quot;_name&quot;</span>: <span class="string">&quot;test&quot;</span></span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+</li>
+<li><p><code>boosting</code>查询</p>
+<p><code>boosting</code>查询会返回匹配了<code>positive</code>查询字段的那些document，然而如果这条查询也匹配到了<code>negative</code>查询，返回的结果就会减低document的相关度分数。</p>
+<p>应用场景：我们可以使用<code>boosting</code>查询去对某些查询结果进行降级，而不是说从搜索结果中将其剔除。</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">GET /_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="attr">&quot;query&quot;</span>: &#123;</span><br><span class="line">    <span class="attr">&quot;boosting&quot;</span>: &#123;</span><br><span class="line">      <span class="attr">&quot;positive&quot;</span>: &#123;</span><br><span class="line">        <span class="attr">&quot;term&quot;</span>: &#123;</span><br><span class="line">          <span class="attr">&quot;text&quot;</span>: <span class="string">&quot;apple&quot;</span></span><br><span class="line">        &#125;</span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="attr">&quot;negative&quot;</span>: &#123;</span><br><span class="line">        <span class="attr">&quot;term&quot;</span>: &#123;</span><br><span class="line">          <span class="attr">&quot;text&quot;</span>: <span class="string">&quot;pie tart fruit crumble tree&quot;</span></span><br><span class="line">        &#125;</span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="attr">&quot;negative_boost&quot;</span>: <span class="number">0.5</span></span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>那问题就是怎么降级？官方文档中给出了相应的解释：</p>
+<p>在<code>negative</code>字段下面还有一个<code>negative_boost</code>字段，我们可以指定这个字段的value值，比如上面例子的0.5。那么具体的降级计算过程就是：</p>
+<ul>
+<li>首先拿到初始的<code>positive</code>查询的相关度分数</li>
+<li>将上面的分数乘以<code>negative_boost</code>的值，就是降级后的结果。<ul>
+<li>注意：<code>negative_boost</code>字段的值一般是浮点数，从0到1.0之间</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p><code>constant score</code>查询</p>
+<p>包装过滤查询，并返回相关度分数等于boost参数值的每个匹配文档。</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">GET /_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="attr">&quot;query&quot;</span>: &#123;</span><br><span class="line">    <span class="attr">&quot;constant_score&quot;</span>: &#123;</span><br><span class="line">      <span class="attr">&quot;filter&quot;</span>: &#123;<span class="comment">//过滤后的结果会被缓存</span></span><br><span class="line">        <span class="attr">&quot;term&quot;</span>: &#123; <span class="attr">&quot;user.id&quot;</span>: <span class="string">&quot;kimchy&quot;</span> &#125;</span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="attr">&quot;boost&quot;</span>: <span class="number">1.2</span></span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+</li>
+</ul>
+<hr>
+<ul>
+<li><strong>参考文献</strong><ul>
+<li><a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-bool-query.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-bool-query.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-boosting-query.html#boosting-query-ex-request">https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-boosting-query.html#boosting-query-ex-request</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-constant-score-query.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-constant-score-query.html</a></li>
+</ul>
+</li>
+</ul>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2020/11/14/ElasticSearch%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-%E4%B8%80/" data-id="ckhheln4m0000kwljf3quby43" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2020/11/14/hello-world/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Hello World</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">November 2020</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2020/11/14/ElasticSearch%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-%E4%B8%80/">ElasticSearch学习笔记(一)：Get Started与复合查询</a>
+          </li>
+        
+          <li>
+            <a href="/2020/11/14/hello-world/">Hello World</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2020 Larry Young<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+
+  
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+  </div>
+</body>
+</html>
