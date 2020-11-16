@@ -204,16 +204,24 @@
 <li><p><code>bool</code>查询</p>
 <p><code>bool</code>查询中主要包含下面几种字段：</p>
 <ul>
-<li><code>must</code>：查询子句必须包含的字段</li>
-<li><code>filter</code>：这个字段负责过滤，但不会参与到相关度分值的计算</li>
-<li><code>should</code>：或的逻辑</li>
-<li><code>must_not</code>：指定不能出现在查询结果中的字段</li>
+<li><p><code>must</code></p>
+<p>查询子句必须包含的字段。</p>
+</li>
+<li><p><code>filter</code></p>
+<p>这个字段负责过滤，但不会参与到相关度分值的计算。</p>
+</li>
+<li><p><code>should</code></p>
+<p>或的逻辑。</p>
+</li>
+<li><p><code>must_not</code></p>
+<p>指定不能出现在查询结果中的字段。</p>
+</li>
 </ul>
 <figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">POST _search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="attr">&quot;query&quot;</span>: &#123;</span><br><span class="line">    <span class="attr">&quot;bool&quot;</span> : &#123;</span><br><span class="line">      <span class="attr">&quot;must&quot;</span> : &#123;</span><br><span class="line">        <span class="attr">&quot;term&quot;</span> : &#123; <span class="attr">&quot;user.id&quot;</span> : <span class="string">&quot;kimchy&quot;</span> &#125;</span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="attr">&quot;filter&quot;</span>: &#123;</span><br><span class="line">        <span class="attr">&quot;term&quot;</span> : &#123; <span class="attr">&quot;tags&quot;</span> : <span class="string">&quot;production&quot;</span> &#125;</span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="attr">&quot;must_not&quot;</span> : &#123;</span><br><span class="line">        <span class="attr">&quot;range&quot;</span> : &#123;</span><br><span class="line">          <span class="attr">&quot;age&quot;</span> : &#123; <span class="attr">&quot;gte&quot;</span> : <span class="number">10</span>, <span class="attr">&quot;lte&quot;</span> : <span class="number">20</span> &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="attr">&quot;should&quot;</span> : [</span><br><span class="line">        &#123; <span class="attr">&quot;term&quot;</span> : &#123; <span class="attr">&quot;tags&quot;</span> : <span class="string">&quot;env1&quot;</span> &#125; &#125;,</span><br><span class="line">        &#123; <span class="attr">&quot;term&quot;</span> : &#123; <span class="attr">&quot;tags&quot;</span> : <span class="string">&quot;deployed&quot;</span> &#125; &#125;</span><br><span class="line">      ],</span><br><span class="line">      <span class="attr">&quot;minimum_should_match&quot;</span> : <span class="number">1</span>,</span><br><span class="line">      <span class="attr">&quot;boost&quot;</span> : <span class="number">1.0</span></span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <ul>
 <li><p>给<code>bool.filter</code>分配score</p>
-<p>首先，我们从前文可以看到，分布在<code>filter</code>标签下的查询语句对于score是没有影响的，也就是说在过滤器上下文下的查询语句返回的相关度分值是0。只有查询语句在精确匹配的前提下才会有score</p>
+<p>首先，我们从前文可以看到，分布在<code>filter</code>标签下的查询语句对于score是没有影响的，也就是说在过滤器上下文下的查询语句返回的相关度分值是0。只有查询语句在精确匹配的前提下才会有score。</p>
 </li>
 <li><p><code>named</code>查询</p>
 <p>每个查询都接收一个<code>_name</code>字段，我们可以使用<code>named</code>查询去跟踪哪些查询与返回的结果文档匹配。如果使用了<code>named</code>查询，那么在返回的响应中每一个命中的document都会包含<code>matched_queries</code>这个属性字段。</p>
@@ -239,9 +247,26 @@
 <li><p><code>constant score</code>查询</p>
 <p>包装过滤查询，并返回相关度分数等于boost参数值的每个匹配文档。</p>
 <figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">GET /_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="attr">&quot;query&quot;</span>: &#123;</span><br><span class="line">    <span class="attr">&quot;constant_score&quot;</span>: &#123;</span><br><span class="line">      <span class="attr">&quot;filter&quot;</span>: &#123;<span class="comment">//过滤后的结果会被缓存</span></span><br><span class="line">        <span class="attr">&quot;term&quot;</span>: &#123; <span class="attr">&quot;user.id&quot;</span>: <span class="string">&quot;kimchy&quot;</span> &#125;</span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="attr">&quot;boost&quot;</span>: <span class="number">1.2</span></span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p><code>disjunction max</code>查询</p>
+<p>它接受多个查询，并返回与任何查询子句匹配的任何文档。当布尔查询合并所有匹配查询的分数时，dis_max查询使用单个最佳匹配查询子句的分数。</p>
+<p>我们可以使用<code>dis_max</code>字段在不同的boost因子映射的字段中去搜索</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">GET /_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="attr">&quot;query&quot;</span>: &#123;</span><br><span class="line">    <span class="attr">&quot;dis_max&quot;</span>: &#123;</span><br><span class="line">      <span class="attr">&quot;queries&quot;</span>: [</span><br><span class="line">        &#123; <span class="attr">&quot;term&quot;</span>: &#123; <span class="attr">&quot;title&quot;</span>: <span class="string">&quot;Quick pets&quot;</span> &#125; &#125;,</span><br><span class="line">        &#123; <span class="attr">&quot;term&quot;</span>: &#123; <span class="attr">&quot;body&quot;</span>: <span class="string">&quot;Quick pets&quot;</span> &#125; &#125;</span><br><span class="line">      ],</span><br><span class="line">      <span class="attr">&quot;tie_breaker&quot;</span>: <span class="number">0.7</span></span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-
-
+<ul>
+<li><p><code>queries</code></p>
+<p>这个字段包含一个或者多个查询子句，同样返回的字段中也必须匹配一个或者多个查询。如果一个文档匹配了多个查询，那么ES会返回的是最高的相关度分数。</p>
+</li>
+<li><p><code>tie_breaker</code></p>
+<p>这是一个可选字段，是一个0到1.0之间的浮点数。我们可以通过给多个字段中包含相同术语的文档分配更好的包含该术语的相关度分数，从而避免混淆。</p>
+<p>具体的计算流程：</p>
+<ul>
+<li>首先拿到匹配子句的最高相关度分值</li>
+<li>将上述结果乘以我们设置的<code>tie_breaker</code>值</li>
+<li>将最高的分值加到我们第二步的分值上去</li>
+</ul>
+</li>
+</ul>
 </li>
 </ul>
 <hr>
