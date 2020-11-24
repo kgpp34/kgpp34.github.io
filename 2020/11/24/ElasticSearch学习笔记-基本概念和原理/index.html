@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+
+  
+  <title>ElasticSearch本概念和原理 | 多模型自适应混子的技术老巢</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="ElasticSearch基本介绍 ES是什么？ ES是一款基于Apache Lucene的开源分布式搜索引擎  应用场景  日志记录与分析（接口调用情况） 采集和组合公共数据（用户行为、点击事件） 全文检索 数据可视化（通过Kibana）   逻辑与物理设计 首先看一些概念：  集群cluster ES是分布式的，多个节点构成一个集群，并且集群也是可扩展的  节点node 每个启动的ES实例就是">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ElasticSearch本概念和原理">
+<meta property="og:url" content="http://example.com/2020/11/24/ElasticSearch%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5%E5%92%8C%E5%8E%9F%E7%90%86/index.html">
+<meta property="og:site_name" content="多模型自适应混子的技术老巢">
+<meta property="og:description" content="ElasticSearch基本介绍 ES是什么？ ES是一款基于Apache Lucene的开源分布式搜索引擎  应用场景  日志记录与分析（接口调用情况） 采集和组合公共数据（用户行为、点击事件） 全文检索 数据可视化（通过Kibana）   逻辑与物理设计 首先看一些概念：  集群cluster ES是分布式的，多个节点构成一个集群，并且集群也是可扩展的  节点node 每个启动的ES实例就是">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2020-11-24T13:27:50.000Z">
+<meta property="article:modified_time" content="2020-11-24T15:24:01.327Z">
+<meta property="article:author" content="Larry Young">
+<meta name="twitter:card" content="summary">
+  
+    <link rel="alternate" href="/atom.xml" title="多模型自适应混子的技术老巢" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+<meta name="generator" content="Hexo 5.2.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">多模型自适应混子的技术老巢</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-ElasticSearch学习笔记-基本概念和原理" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/11/24/ElasticSearch%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5%E5%92%8C%E5%8E%9F%E7%90%86/" class="article-date">
+  <time datetime="2020-11-24T13:27:50.000Z" itemprop="datePublished">2020-11-24</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      ElasticSearch本概念和原理
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="ElasticSearch基本介绍"><a href="#ElasticSearch基本介绍" class="headerlink" title="ElasticSearch基本介绍"></a>ElasticSearch基本介绍</h2><ul>
+<li><p>ES是什么？</p>
+<p>ES是一款基于Apache Lucene的开源分布式搜索引擎</p>
+</li>
+<li><p>应用场景</p>
+<ul>
+<li>日志记录与分析（接口调用情况）</li>
+<li>采集和组合公共数据（用户行为、点击事件）</li>
+<li>全文检索</li>
+<li>数据可视化（通过Kibana）</li>
+</ul>
+</li>
+<li><p>逻辑与物理设计</p>
+<p>首先看一些概念：</p>
+<ul>
+<li><p>集群cluster</p>
+<p>ES是分布式的，多个节点构成一个集群，并且集群也是可扩展的</p>
+</li>
+<li><p>节点node</p>
+<p>每个启动的ES实例就是一个节点，可以随时加入或者脱离集群</p>
+</li>
+<li><p>索引index</p>
+<p>名词：一堆字段相似的文档的集合，类比MySQL的一张表</p>
+<p>动词：将文档写入某个索引</p>
+</li>
+<li><p>文档document</p>
+<p>一条ES的记录，类比MySQL的一行数据</p>
+</li>
+<li><p>分片shard</p>
+<ul>
+<li>分片是ES所能管理的最小单元</li>
+<li>一个分片就是一个Lucenne索引</li>
+<li>一个包含倒排索引的文件目录</li>
+<li>分片越多（过度分片），搜索有可能越慢</li>
+</ul>
+</li>
+<li><p>分段segment</p>
+<ul>
+<li><p>lucene索引再分割的小单元</p>
+</li>
+<li><p>分段不会被修改</p>
+</li>
+<li><p>分段越多，搜索越慢</p>
+</li>
+<li><p>索引新的文档会创建新的分段</p>
+</li>
+<li><p>分段会被持续地合并</p>
+</li>
+<li><p>删除文档的时候不会真的删除（只是设置了标记）</p>
+</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>分片：扩展与容灾</p>
+</blockquote>
+<p>![](F:\YoungLH’s blog\source_posts\ElasticSearch学习笔记-基本概念和原理\ES概念图.jpg)</p>
+<p>首先，一个索引地所有分片会自动均匀地分布在所有节点中。当我们加入一个新节点后，如下图所示，原集群节点中地分片，有部分会迁移到新节点。</p>
+<p>![](F:\YoungLH’s blog\source_posts\ElasticSearch学习笔记-基本概念和原理\加入节点.jpg)</p>
+<p><em>注：设置分片数量稍微大于节点数量，有利于横向扩容时，分片蔓延到所有新节点，如图一所示，就是一个index包含四个分片，而es集群中有三个节点，新加入节点后可以蔓延（最理想的状态就是每个节点都有分片）。但是蔓延的过程是有一定消耗的，所以会对集群产生一些抖动的。此外，当主分片和所有副本分片都就绪时，索引地健康状态是绿色</em></p>
+<p>我们在Kibana的monitoring组件上可以看见分片的活跃程度。</p>
+</li>
+</ul>
+<p>  接下来我们来分析容灾，如下图所示为在图1的基础上挂掉一个节点的示意图。</p>
+<p>  ![](F:\YoungLH’s blog\source_posts\ElasticSearch学习笔记-基本概念和原理\挂掉一个节点.jpg)</p>
+<ul>
+<li><p>当挂掉了N个节点时，如果副本分片是N，那么剩下的副本分片将  自动提升为主分片。</p>
+</li>
+<li><p>然后所有的主分片能构成完整的索引，但是副本分片缺失时，此时索引健康状态是黄色。</p>
+</li>
+<li><p>如果挂掉N+1个节点，主分片将缺失，健康状态是红色。</p>
+</li>
+<li><p>我们需要根据实际情况合理的设置副本的数量（副本太多也会影响性能）</p>
+</li>
+<li><p>通常同时挂掉两个节点的概率不高，一般来说一个副本可以满足常规容灾要求。</p>
+</li>
+</ul>
+<blockquote>
+<p>索引和搜索数据</p>
+</blockquote>
+<p>  索引请求如下图所示：</p>
+<p>  ![](F:\YoungLH’s blog\source_posts\ElasticSearch学习笔记-基本概念和原理\索引请求.jpg)</p>
+<ul>
+<li><p>具体过程</p>
+<ul>
+<li>索引文档请求到一个节点</li>
+<li>文档会被随机到一个主分片上</li>
+<li>从主分片同步到副本分片</li>
+<li>返回成功的结果</li>
+</ul>
+<p>注：副本分片越多，索引数据越慢，因为要所有副本都完成才算成功</p>
+<p>再来看搜索过程，如下图所示：</p>
+<p>![](F:\YoungLH’s blog\source_posts\ElasticSearch学习笔记-基本概念和原理\搜索请求.jpg)</p>
+</li>
+<li><p>具体过程</p>
+<ul>
+<li>搜索请求到一个节点</li>
+<li>节点转发请求到本节点的一个分片和其他节点的另一个分片</li>
+<li>所有的分片都返回搜索结果到起始节点，但是只要有一个shard搜索到了数据就会立刻返回</li>
+<li>起始节点返回搜索结果到请求方</li>
+</ul>
+<p>注：不同节点的主分片+副本分片的总数越多，请求被分摊的越  多，并发搜索兴能越好。但是如果节点数很少，分片都集中到了少数节点上，搜索速度会变慢，因为增加了开销，实际没有分摊负载。此外，单个搜索没有办法通过分片加速。</p>
+<p>​    </p>
+<blockquote>
+<p>分段</p>
+</blockquote>
+<p>![](F:\YoungLH’s blog\source_posts\ElasticSearch学习笔记-基本概念和原理\分段.jpg)</p>
+</li>
+<li><p>写入</p>
+<ul>
+<li>只能写打开的分段（为了避免冲入合并）</li>
+<li>删除是假的删除，也是往打开的分段里写标志位（这是为了保证随机读写）</li>
+<li>分段大小超过一定阈值，会触发分段合并</li>
+<li>小分段合并成大分段，为了查询加速，但合并过程是先创建一个大分段，再把两个小的放进去，再删除这两个小的，但这个过程会耗费大量资源</li>
+<li>如果希望写入快，就要避免频繁的分段合并</li>
+</ul>
+</li>
+<li><p>读取</p>
+<ul>
+<li>只能读取关闭的分段（所以ES叫准实时，关闭这个过程也叫做刷新）</li>
+<li>对一个分片查询，会等它所有的分段返回结果，所以分段过多，查询越慢</li>
+<li>刷新时，会关闭一批分段，这时候数据才能被查到</li>
+<li>刷新频率太快会导致分段碎片多</li>
+<li>刷新频率过慢会导致实时性低</li>
+</ul>
+</li>
+</ul>
+<p>  <em>总结一下，我们可以看到，如果我们追求的是写入更快的话，我们就要尽力的避免频繁的分段合并，保留相对多一点的分段；但是如果我们要追求读取性能的话又要考虑减少分段，这也就是鱼和熊掌的问题了，需要我们结合实际业务场景进行分析。</em></p>
+<p>  Kibana中的一些设置：</p>
+<p>  ![](F:\YoungLH’s blog\source_posts\ElasticSearch学习笔记-基本概念和原理\kibana设置.jpg)</p>
+<p>  在Kibana中我们可以设置刷新的频率、副本数量等等参数</p>
+<ul>
+<li><p>那么索引分片不是免费的吗/分片越多越好吗？</p>
+<ul>
+<li><p>每个索引和分片都会产生一定的资源开销，尤其是内存资源</p>
+</li>
+<li><p>每个索引，映射和状态的信息都存储在集群中</p>
+<ul>
+<li>存储在内存中，以便快速访问</li>
+<li>分片数量过多，会导致集群状态过大</li>
+<li>这会导致更新变慢，因为所有的更新都是通过单线程来完成的，从而这是在将变更分发到整个集群之前确保一致性的前提</li>
+</ul>
+</li>
+<li><p>分片有一部分数据需要保存在内存中</p>
+<ul>
+<li>这部分数据也会占据堆内存空间</li>
+<li>这包括存储分片级别以及段级别信息的数据结构</li>
+<li>因为只有这样才能确定数据在磁盘上的存储位置</li>
+</ul>
+</li>
+<li><p>那怎么样在单个节点上存储尽可能多的数据呢？</p>
+<ul>
+<li>管理堆内存使用量</li>
+<li>尽可能减少开销</li>
+<li>节点的堆内存空间越多，能处理的数据和分片就越多</li>
+<li>官方建议：JVM heap每1G不超过20个分片，每个分片大小在20G</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr>
+<p><em>参考连接</em></p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://www.bilibili.com/video/BV1kf4y1R7qR">https://www.bilibili.com/video/BV1kf4y1R7qR</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/">https://www.elastic.co/guide/en/elasticsearch/reference/</a></li>
+</ul>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2020/11/24/ElasticSearch%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5%E5%92%8C%E5%8E%9F%E7%90%86/" data-id="ckhw4sfey0001vsljgkzo0krr" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2020/11/24/ElasticSearch%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5%E4%B8%8E%E5%8E%9F%E7%90%86/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          ElasticSearch基本概念与原理
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2020/11/16/%E7%AE%97%E6%B3%95-%E4%BA%8C%E5%88%86%E6%B3%95-%E4%B8%80/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">算法-二分法(一)</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">November 2020</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2020/11/24/ElasticSearch%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5%E4%B8%8E%E5%8E%9F%E7%90%86/">ElasticSearch基本概念与原理</a>
+          </li>
+        
+          <li>
+            <a href="/2020/11/24/ElasticSearch%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5%E5%92%8C%E5%8E%9F%E7%90%86/">ElasticSearch本概念和原理</a>
+          </li>
+        
+          <li>
+            <a href="/2020/11/16/%E7%AE%97%E6%B3%95-%E4%BA%8C%E5%88%86%E6%B3%95-%E4%B8%80/">算法-二分法(一)</a>
+          </li>
+        
+          <li>
+            <a href="/2020/11/14/ElasticSearch%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8(%E4%B8%80)/">ElasticSearch基本使用(一)：Get Started与复合查询</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2020 Larry Young<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+
+  
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+  </div>
+</body>
+</html>
