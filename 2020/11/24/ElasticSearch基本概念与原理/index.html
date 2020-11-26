@@ -14,10 +14,18 @@
 <meta property="og:site_name" content="多模型自适应混子的技术老巢">
 <meta property="og:description" content="ElasticSearch基本介绍 ES是什么？ ES是一款基于Apache Lucene的开源分布式搜索引擎  应用场景  日志记录与分析（接口调用情况） 采集和组合公共数据（用户行为、点击事件） 全文检索 数据可视化（通过Kibana）   逻辑与物理设计 首先看一些概念：  集群cluster ES是分布式的，多个节点构成一个集群，并且集群也是可扩展的  节点node 每个启动的ES实例就是">
 <meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/.com//%E7%B4%A2%E5%BC%95%E8%AF%B7%E6%B1%82.jpg">
+<meta property="og:image" content="http://example.com/.com//%E5%8A%A0%E5%85%A5%E8%8A%82%E7%82%B9.jpg">
+<meta property="og:image" content="http://example.com/.com//%E6%8C%82%E6%8E%89%E4%B8%80%E4%B8%AA%E8%8A%82%E7%82%B9.jpg">
+<meta property="og:image" content="http://example.com/.com//%E7%B4%A2%E5%BC%95%E8%AF%B7%E6%B1%82.jpg">
+<meta property="og:image" content="http://example.com/.com//%E6%90%9C%E7%B4%A2%E8%AF%B7%E6%B1%82.jpg">
+<meta property="og:image" content="http://example.com/.com//%E5%88%86%E6%AE%B5.jpg">
+<meta property="og:image" content="http://example.com/.com//kibana%E8%AE%BE%E7%BD%AE.jpg">
 <meta property="article:published_time" content="2020-11-24T15:28:29.000Z">
-<meta property="article:modified_time" content="2020-11-24T15:35:50.130Z">
+<meta property="article:modified_time" content="2020-11-26T10:34:30.541Z">
 <meta property="article:author" content="Larry Young">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/.com//%E7%B4%A2%E5%BC%95%E8%AF%B7%E6%B1%82.jpg">
   
     <link rel="alternate" href="/atom.xml" title="多模型自适应混子的技术老巢" type="application/atom+xml">
   
@@ -144,13 +152,13 @@
 <blockquote>
 <p>分片：扩展与容灾</p>
 </blockquote>
-<p>![](F:\YoungLH’s blog\source_posts\ElasticSearch基本概念与原理\ES概念图.jpg)</p>
+<p><img src="/.com//%E7%B4%A2%E5%BC%95%E8%AF%B7%E6%B1%82.jpg"></p>
 <p>首先，一个索引地所有分片会自动均匀地分布在所有节点中。当我们加入一个新节点后，如下图所示，原集群节点中地分片，有部分会迁移到新节点。</p>
-<p>![](F:\YoungLH’s blog\source_posts\ElasticSearch基本概念与原理\加入节点.jpg)</p>
+<p><img src="/.com//%E5%8A%A0%E5%85%A5%E8%8A%82%E7%82%B9.jpg"></p>
 <p><em>注：设置分片数量稍微大于节点数量，有利于横向扩容时，分片蔓延到所有新节点，如图一所示，就是一个index包含四个分片，而es集群中有三个节点，新加入节点后可以蔓延（最理想的状态就是每个节点都有分片）。但是蔓延的过程是有一定消耗的，所以会对集群产生一些抖动的。此外，当主分片和所有副本分片都就绪时，索引地健康状态是绿色</em></p>
 <p>我们在Kibana的monitoring组件上可以看见分片的活跃程度。</p>
 <p>接下来我们来分析容灾，如下图所示为在图1的基础上挂掉一个节点的示意图。</p>
-<p>![](F:\YoungLH’s blog\source_posts\ElasticSearch基本概念与原理\挂掉一个节点.jpg)</p>
+<p><img src="/.com//%E6%8C%82%E6%8E%89%E4%B8%80%E4%B8%AA%E8%8A%82%E7%82%B9.jpg"></p>
 <ul>
 <li>当挂掉了N个节点时，如果副本分片是N，那么剩下的副本分片将  自动提升为主分片。</li>
 <li>然后所有的主分片能构成完整的索引，但是副本分片缺失时，此时索引健康状态是黄色。</li>
@@ -162,7 +170,7 @@
 <p>索引和搜索数据</p>
 </blockquote>
 <p>索引请求如下图所示：</p>
-<p>![](F:\YoungLH’s blog\source_posts\ElasticSearch基本概念与原理\索引请求.jpg)</p>
+<p><img src="/.com//%E7%B4%A2%E5%BC%95%E8%AF%B7%E6%B1%82.jpg"></p>
 <ul>
 <li><p>具体过程</p>
 <ul>
@@ -175,7 +183,7 @@
 </li>
 </ul>
 <p>再来看搜索过程，如下图所示：</p>
-<p>![](F:\YoungLH’s blog\source_posts\ElasticSearch基本概念与原理\搜索请求.jpg)</p>
+<p><img src="/.com//%E6%90%9C%E7%B4%A2%E8%AF%B7%E6%B1%82.jpg"></p>
 <ul>
 <li><p>具体过程</p>
 <ul>
@@ -190,7 +198,7 @@
 <blockquote>
 <p>分段</p>
 </blockquote>
-<p>![](F:\YoungLH’s blog\source_posts\ElasticSearch基本概念与原理\分段.jpg)</p>
+<p><img src="/.com//%E5%88%86%E6%AE%B5.jpg"></p>
 <ul>
 <li><p>写入</p>
 <ul>
@@ -213,7 +221,7 @@
 </ul>
 <p><em>总结一下，我们可以看到，如果我们追求的是写入更快的话，我们就要尽力的避免频繁的分段合并，保留相对多一点的分段；但是如果我们要追求读取性能的话又要考虑减少分段，这也就是鱼和熊掌的问题了，需要我们结合实际业务场景进行分析。</em></p>
 <p>Kibana中的一些设置：</p>
-<p>![](F:\YoungLH’s blog\source_posts\ElasticSearch基本概念与原理\kibana设置.jpg)</p>
+<p><img src="/.com//kibana%E8%AE%BE%E7%BD%AE.jpg"></p>
 <p>在Kibana中我们可以设置刷新的频率、副本数量等等参数</p>
 <ul>
 <li><p>那么索引分片不是免费的吗/分片越多越好吗？</p>
@@ -267,9 +275,9 @@
 <nav id="article-nav">
   
   
-    <a href="/2020/11/24/ElasticSearch%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5%E5%92%8C%E5%8E%9F%E7%90%86/" id="article-nav-older" class="article-nav-link-wrap">
+    <a href="/2020/11/16/%E7%AE%97%E6%B3%95-%E4%BA%8C%E5%88%86%E6%B3%95-%E4%B8%80/" id="article-nav-older" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Older</strong>
-      <div class="article-nav-title">ElasticSearch本概念和原理</div>
+      <div class="article-nav-title">算法-二分法(一)</div>
     </a>
   
 </nav>
@@ -307,10 +315,6 @@
         
           <li>
             <a href="/2020/11/24/ElasticSearch%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5%E4%B8%8E%E5%8E%9F%E7%90%86/">ElasticSearch基本概念与原理</a>
-          </li>
-        
-          <li>
-            <a href="/2020/11/24/ElasticSearch%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5%E5%92%8C%E5%8E%9F%E7%90%86/">ElasticSearch本概念和原理</a>
           </li>
         
           <li>
