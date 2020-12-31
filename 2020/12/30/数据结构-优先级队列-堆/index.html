@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+
+  
+  <title>数据结构(优先级队列/堆) | 多模型自适应混子的技术老巢</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="为什么写这篇博客​    首先这是比较基础的数据结构的相应知识，需要重新思考一下堆的结构，插入或者删除一个元素的过程。第二就是校招面试的时候曾经面过TopK问题，当时我用的是Java自带的优先级队列API去实现的，但是写完了面试官说不可以用API，我当时因为以前仅仅看过labuladong的算法笔记，没有进行实操，所以写的时间比较长，并且按照该笔记的写法，堆的大小都是固定好的，超出长度就会抛异常，">
+<meta property="og:type" content="article">
+<meta property="og:title" content="数据结构(优先级队列&#x2F;堆)">
+<meta property="og:url" content="http://example.com/2020/12/30/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-%E4%BC%98%E5%85%88%E7%BA%A7%E9%98%9F%E5%88%97-%E5%A0%86/index.html">
+<meta property="og:site_name" content="多模型自适应混子的技术老巢">
+<meta property="og:description" content="为什么写这篇博客​    首先这是比较基础的数据结构的相应知识，需要重新思考一下堆的结构，插入或者删除一个元素的过程。第二就是校招面试的时候曾经面过TopK问题，当时我用的是Java自带的优先级队列API去实现的，但是写完了面试官说不可以用API，我当时因为以前仅仅看过labuladong的算法笔记，没有进行实操，所以写的时间比较长，并且按照该笔记的写法，堆的大小都是固定好的，超出长度就会抛异常，">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/2020/12/30/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-%E4%BC%98%E5%85%88%E7%BA%A7%E9%98%9F%E5%88%97-%E5%A0%86/..%5Cimages%5C%E4%BA%8C%E5%8F%89%E5%A0%86.jpg">
+<meta property="og:image" content="http://example.com/2020/12/30/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-%E4%BC%98%E5%85%88%E7%BA%A7%E9%98%9F%E5%88%97-%E5%A0%86/..%5Cimages%5C%E4%BA%8C%E5%8F%89%E5%A0%86%E6%95%B0%E7%BB%84%E8%A1%A8%E7%A4%BA.jpg">
+<meta property="og:image" content="http://example.com/2020/12/30/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-%E4%BC%98%E5%85%88%E7%BA%A7%E9%98%9F%E5%88%97-%E5%A0%86/..%5Cimages%5C%E5%A0%86%E7%9A%84%E6%8F%92%E5%85%A5%E6%93%8D%E4%BD%9C1.jpg">
+<meta property="og:image" content="http://example.com/2020/12/30/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-%E4%BC%98%E5%85%88%E7%BA%A7%E9%98%9F%E5%88%97-%E5%A0%86/..%5Cimages%5C%E5%A0%86%E7%9A%84%E6%8F%92%E5%85%A5%E6%93%8D%E4%BD%9C2.jpg">
+<meta property="og:image" content="http://example.com/2020/12/30/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-%E4%BC%98%E5%85%88%E7%BA%A7%E9%98%9F%E5%88%97-%E5%A0%86/..%5Cimages%5C%E5%A0%86%E7%9A%84%E5%88%A0%E9%99%A4%E6%93%8D%E4%BD%9C1.jpg">
+<meta property="og:image" content="http://example.com/2020/12/30/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-%E4%BC%98%E5%85%88%E7%BA%A7%E9%98%9F%E5%88%97-%E5%A0%86/..%5Cimages%5C%E5%A0%86%E7%9A%84%E5%88%A0%E9%99%A4%E6%93%8D%E4%BD%9C2.jpg">
+<meta property="article:published_time" content="2020-12-30T14:25:13.000Z">
+<meta property="article:modified_time" content="2020-12-31T03:30:18.983Z">
+<meta property="article:author" content="Larry Young">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2020/12/30/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-%E4%BC%98%E5%85%88%E7%BA%A7%E9%98%9F%E5%88%97-%E5%A0%86/..%5Cimages%5C%E4%BA%8C%E5%8F%89%E5%A0%86.jpg">
+  
+    <link rel="alternate" href="/atom.xml" title="多模型自适应混子的技术老巢" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+<meta name="generator" content="Hexo 5.2.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">多模型自适应混子的技术老巢</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-数据结构-优先级队列-堆" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/12/30/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-%E4%BC%98%E5%85%88%E7%BA%A7%E9%98%9F%E5%88%97-%E5%A0%86/" class="article-date">
+  <time datetime="2020-12-30T14:25:13.000Z" itemprop="datePublished">2020-12-30</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      数据结构(优先级队列/堆)
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="为什么写这篇博客"><a href="#为什么写这篇博客" class="headerlink" title="为什么写这篇博客"></a>为什么写这篇博客</h2><p>​    首先这是比较基础的数据结构的相应知识，需要重新思考一下堆的结构，插入或者删除一个元素的过程。第二就是校招面试的时候曾经面过TopK问题，当时我用的是Java自带的优先级队列API去实现的，但是写完了面试官说不可以用API，我当时因为以前仅仅看过labuladong的算法笔记，没有进行实操，所以写的时间比较长，并且按照该笔记的写法，堆的大小都是固定好的，超出长度就会抛异常，所以我就顺理成章的挂掉了。因此我在今天做面试复盘的时候决定还是重新写一下基本的堆操作。</p>
+<h2 id="基本概念"><a href="#基本概念" class="headerlink" title="基本概念"></a>基本概念</h2><p>​    一般而言，我们选择实现优先级队列可以有如下的方式：</p>
+<p>​    (1) 链表：在表头插入<code>O(1)</code>时间复杂度，删除需要遍历整个链表需要<code>O(N)</code>的时间复杂度。如果考虑有序链表，那么插入一个元素的代价就是<code>O(N)</code>，删除则是<code>O(1)</code>。</p>
+<p>​    (2) 二叉查找树：平均的时间复杂度是<code>O(LogN)</code>, 对于插入来讲这个时间复杂度是可以满足的，但是如果删除的元素都是一侧(要么左子树要么右子树)，那么删除操作的时间复杂度就会退化成一条链表，即<code>O(N)</code></p>
+<p>​    那么实际中我们用到更多的数据结构就是二叉堆，和二叉查找树一样，他也是类似一棵树，但是不同的是他是一颗完全二叉树，为了更好地理解，我们将其画成如下形式：</p>
+<p><img src="/2020/12/30/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-%E4%BC%98%E5%85%88%E7%BA%A7%E9%98%9F%E5%88%97-%E5%A0%86/..%5Cimages%5C%E4%BA%8C%E5%8F%89%E5%A0%86.jpg"></p>
+<p>那这种树我们可以换一种表示方法：就是用数组来进行描述</p>
+<p><img src="/2020/12/30/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-%E4%BC%98%E5%85%88%E7%BA%A7%E9%98%9F%E5%88%97-%E5%A0%86/..%5Cimages%5C%E4%BA%8C%E5%8F%89%E5%A0%86%E6%95%B0%E7%BB%84%E8%A1%A8%E7%A4%BA.jpg"></p>
+<p>首先我们结合上面两个图来看，数组中任意一个位置的父节点索引都是<code>当前元素索引/2</code>，而任意一个节点的左孩子和右孩子节点就分别是<code>当前索引*2</code>和<code>当前索引*2+1</code>；其次，可以发现在第二张图中，首位的元素为空，这是为了我们以后进行插入元素的时候方便比较插入的元素和要进行交换的元素。</p>
+<h2 id="数据结构实现"><a href="#数据结构实现" class="headerlink" title="数据结构实现"></a>数据结构实现</h2><p>那么谈论完概念以后，我们就需要去实现堆，在这片本章里，我们主要实现的是最小堆，即堆顶的元素是最小的，其余的孩子节点都是比堆顶要大的元素，并且我们还要保证堆是一颗完全二叉树，能够通过插入一个元素或者删除一个最小元素调整堆的结构。</p>
+<p>首先就来看具体的类是什么样子：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"> <span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Heap</span>&lt;<span class="title">Integer</span> <span class="keyword">extends</span> <span class="title">Comparable</span>&lt;? <span class="title">super</span> <span class="title">Integer</span>&gt;&gt;</span>&#123;</span><br><span class="line">	<span class="comment">//无参构造函数</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">Heap</span><span class="params">()</span> </span>&#123;&#125;</span><br><span class="line">     </span><br><span class="line">	<span class="comment">//可以指定具体大小的构造函数</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">Heap</span><span class="params">(<span class="keyword">int</span> capacity)</span> </span>&#123;&#125;</span><br><span class="line">     </span><br><span class="line">	<span class="comment">//如果传入的是Integer数组，转换成堆的构造函数</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">Heap</span><span class="params">(Integer [] items)</span> </span>&#123;&#125;</span><br><span class="line">     </span><br><span class="line">	<span class="comment">//插入堆操作</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">insert</span><span class="params">(Integer x)</span> </span>&#123;&#125;</span><br><span class="line">     </span><br><span class="line">	<span class="comment">//删除最小元素</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Integer <span class="title">deleteMin</span><span class="params">()</span> </span>&#123;&#125;</span><br><span class="line">     </span><br><span class="line">	<span class="comment">//拿到最小元素</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Integer <span class="title">getMin</span><span class="params">()</span> </span>&#123;&#125;</span><br><span class="line">     </span><br><span class="line">	<span class="comment">//判断当前堆是不是为空</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">isEmpty</span><span class="params">()</span> </span>&#123;&#125;</span><br><span class="line">     </span><br><span class="line">	<span class="comment">//将堆置空</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">makeEmpty</span><span class="params">()</span> </span>&#123;&#125;</span><br><span class="line">     </span><br><span class="line">	<span class="comment">//设置默认堆大小为10</span></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> DEFAULT_CAPACITY = <span class="number">10</span>;</span><br><span class="line">     </span><br><span class="line">    <span class="comment">//当前堆大小</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> currentSize;</span><br><span class="line">     </span><br><span class="line">    <span class="comment">//存储元素的底层数组</span></span><br><span class="line">    <span class="keyword">private</span> Integer[] array;</span><br><span class="line">     </span><br><span class="line">	<span class="comment">//构建一个堆</span></span><br><span class="line">	<span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">buildHeap</span><span class="params">()</span> </span>&#123;&#125;</span><br><span class="line">     </span><br><span class="line">	<span class="comment">//元素下潜</span></span><br><span class="line">	<span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">sink</span><span class="params">(<span class="keyword">int</span> idx)</span> </span>&#123;&#125;</span><br><span class="line">     </span><br><span class="line">	<span class="comment">//堆扩容</span></span><br><span class="line">	<span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">resizeArray</span><span class="params">(<span class="keyword">int</span> newSize)</span> </span>&#123;&#125;</span><br><span class="line">	</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>具体的注释我都写在代码上了，大致也就是这些属性和方法。那么对于一个堆而言最重要的就是一些基本操作：插入、删除，下面我们就一起来看一下这些方法怎么实现。</p>
+<h3 id="插入操作"><a href="#插入操作" class="headerlink" title="插入操作"></a>插入操作</h3><p>​    插入的思路是这样的，我们的元素需要被放在堆中合适的位置，那么我们可以从堆的最后面开始进行比较，也就是在堆的最后面的节点创建一个新的节点，然后将新节点和父节点的值进行比较，如果确实是新节点比较小的话，就需要把新节点<strong>“上移”</strong>,同时把父节点转移到原先新节点的位置，那么这个时候就相当于新节点就上了一层“台阶”，接下来的操作就是继续和上一层台阶的父节点再进行比较，直到找到合适的位置。我们可以通过图来理解：</p>
+<p><img src="/2020/12/30/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-%E4%BC%98%E5%85%88%E7%BA%A7%E9%98%9F%E5%88%97-%E5%A0%86/..%5Cimages%5C%E5%A0%86%E7%9A%84%E6%8F%92%E5%85%A5%E6%93%8D%E4%BD%9C1.jpg"></p>
+<p><img src="/2020/12/30/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-%E4%BC%98%E5%85%88%E7%BA%A7%E9%98%9F%E5%88%97-%E5%A0%86/..%5Cimages%5C%E5%A0%86%E7%9A%84%E6%8F%92%E5%85%A5%E6%93%8D%E4%BD%9C2.jpg"></p>
+<p>这个过程用图片描述的比较清楚了，下面我们给出具体的代码:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/***</span></span><br><span class="line"><span class="comment">* 插入操作</span></span><br><span class="line"><span class="comment">* <span class="doctag">@Param</span>：x是要插入的元素</span></span><br><span class="line"><span class="comment">***/</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">insert</span><span class="params">(Integer x)</span> </span>&#123;</span><br><span class="line">    <span class="comment">//首先判断是不是需要扩容</span></span><br><span class="line">    <span class="keyword">if</span> (currentSize == array.length - <span class="number">1</span>) &#123;</span><br><span class="line">        resizeArray(array.length * <span class="number">2</span> + <span class="number">1</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//插入操作</span></span><br><span class="line">    <span class="comment">//这一步对应图中所说的新建一个节点，即将currentSize+1</span></span><br><span class="line">    <span class="keyword">int</span> idx = ++currentSize; </span><br><span class="line">    <span class="keyword">for</span> (array[<span class="number">0</span>] = x; x.compareTo(array[idx / <span class="number">2</span>]) &lt; <span class="number">0</span>; idx /= <span class="number">2</span>) &#123;</span><br><span class="line">        <span class="comment">//这一步就是之前文章说的，要将待插入的元素和父节点循环进行比较，如果x比父节点小，那么就上移，否则就找到了要插入的位置。</span></span><br><span class="line">        array[idx] = array[idx / <span class="number">2</span>];<span class="comment">//先把父节点copy下来</span></span><br><span class="line">    &#125;</span><br><span class="line">    array[idx] = x;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>关于代码里为什么不在循环内做x新节点和父节点的交换操作，书📕<em>Data Structures and Algorithm Analysis in Java</em>中提到如果元素上浮d层，其中每次循环中就有三次赋值交换，总共就是3d次交换，而上面代码的写法就仅仅交换了d+1次，提升了效率。</p>
+<h3 id="删除操作"><a href="#删除操作" class="headerlink" title="删除操作"></a>删除操作</h3><p>首先拿到堆的最小元素的操作很简单，就是数组index=1位置的元素值，问题是如果删除了最小的元素，整个堆要怎么进行调整。</p>
+<p>删除了堆顶元素之后相当于，堆顶节点空了，所以我们一般来说就要找到一个节点，然后放到这个堆顶的空位置，然后依次向下层重复这个操作。我们一般都是选择将空节点的两个孩子节点中比较小的那个转移到原来堆顶的位置，那么转移过后，原来的那个较小的孩子节点的位置又有变成了空节点“堆顶”，然后一直<strong>“下潜”</strong>就可以了。</p>
+<p>我们还是通过图来说明这个过程：</p>
+<p><img src="/2020/12/30/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-%E4%BC%98%E5%85%88%E7%BA%A7%E9%98%9F%E5%88%97-%E5%A0%86/..%5Cimages%5C%E5%A0%86%E7%9A%84%E5%88%A0%E9%99%A4%E6%93%8D%E4%BD%9C1.jpg"></p>
+<p><img src="/2020/12/30/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-%E4%BC%98%E5%85%88%E7%BA%A7%E9%98%9F%E5%88%97-%E5%A0%86/..%5Cimages%5C%E5%A0%86%E7%9A%84%E5%88%A0%E9%99%A4%E6%93%8D%E4%BD%9C2.jpg"></p>
+<p>书📕<em>Data Structures and Algorithm Analysis in Java</em>中还提到，堆的实践中容易发生错误的情况就是堆中元素个数为偶数时，就会产生一个节点可能只有一个孩子，那么解决的办法就是依旧把它当作拥有两个孩子节点进行比较。（这一段我看的是中文版的书，机翻真的不知所云…）</p>
+<p>来看代码解释：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/***</span></span><br><span class="line"><span class="comment">* 删除最小的堆顶元素</span></span><br><span class="line"><span class="comment">* </span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> Integer <span class="title">deleteMin</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (isEmpty()) &#123;</span><br><span class="line">        <span class="comment">//首先判空，抛异常</span></span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> NullPointerException();</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//拿到最小的元素</span></span><br><span class="line">    Integer min = getMin();</span><br><span class="line">    <span class="comment">//将图中的“31”节点先记录到空节点上</span></span><br><span class="line">    array[<span class="number">1</span>] = array[currentSize--];</span><br><span class="line">    <span class="comment">//sink下移</span></span><br><span class="line">    sink(<span class="number">1</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">return</span> min;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">/***</span></span><br><span class="line"><span class="comment">* 下移</span></span><br><span class="line"><span class="comment">* <span class="doctag">@Param</span>：idx是从哪个索引处开始下移</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">sink</span><span class="params">(<span class="keyword">int</span> idx)</span> </span>&#123;</span><br><span class="line">    <span class="comment">//孩子节点的index</span></span><br><span class="line">    <span class="keyword">int</span> childIdx;</span><br><span class="line">    <span class="comment">//保存我们翻上来的“31”到临时节点</span></span><br><span class="line">    Integer tmp = array[idx];</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//下移操作</span></span><br><span class="line">    <span class="keyword">for</span> (; idx * <span class="number">2</span> &lt;= currentSize; idx = child) &#123;</span><br><span class="line">        <span class="keyword">if</span> (child != currentSize &amp;&amp; </span><br><span class="line">           array[child + <span class="number">1</span>].compareTo(array[child]) &lt; <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="comment">//这一步就是比较左右孩子节点谁更小</span></span><br><span class="line">            child++;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (array[child].compareTo(array[tmp]) &lt; <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="comment">//如果左右孩子中小的那个比“31”小，就把孩子节点放到堆顶</span></span><br><span class="line">            array[idx] = array[child];</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="comment">//&quot;31&quot;找到了位置</span></span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    array[idx] = tmp;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="扩容操作"><a href="#扩容操作" class="headerlink" title="扩容操作"></a>扩容操作</h3><p>其实没啥说的，但是我面试的时候就没写这个，所以…挂了</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">resizeArray</span><span class="params">(<span class="keyword">int</span> newSize)</span> </span>&#123;</span><br><span class="line">        Integer[] oldArray = array;</span><br><span class="line">        array = (Integer[]) <span class="keyword">new</span> Comparable[newSize];</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; oldArray.length; i++) &#123;</span><br><span class="line">            array[i] = oldArray[i];</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="构建堆操作"><a href="#构建堆操作" class="headerlink" title="构建堆操作"></a>构建堆操作</h3><p>这一步我们重点对如果传入的是一个数组进行堆化的操作，一般来说可以将长度为N的数组用任意的顺序放到我们的二叉堆中，然后进行sink操作就可以了。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">Heap</span><span class="params">(Integer[] items)</span> </span>&#123;</span><br><span class="line">    <span class="comment">//调整堆的大小</span></span><br><span class="line">    currentSize = items.length;</span><br><span class="line">    </span><br><span class="line">    array = (Integer[])<span class="keyword">new</span> Comparable((currentSize + <span class="number">2</span>) * <span class="number">11</span> / <span class="number">10</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">int</span> i = <span class="number">1</span>;</span><br><span class="line">    <span class="comment">//写到底层数组里</span></span><br><span class="line">    <span class="keyword">for</span> (Integer num : items) &#123;</span><br><span class="line">        array[i++] = num;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//堆化</span></span><br><span class="line">    buildHeap();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">buildHeap</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = currentSize / <span class="number">2</span>; i &gt;= <span class="number">0</span>; i--) &#123;</span><br><span class="line">        sink(i);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>​    堆的基本操作基本都涵盖到了，但是还有一些细枝末节的部分这篇博文就不涉及了（主要是懒得写了），主要是为了总结一下重点，了解一下堆的各种基本操作。</p>
+<hr>
+<p>参考文献</p>
+<p>1.<em>Data Structures and Algorithm Analysis in Java</em></p>
+<p>2.labuladong的算法小抄</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2020/12/30/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-%E4%BC%98%E5%85%88%E7%BA%A7%E9%98%9F%E5%88%97-%E5%A0%86/" data-id="ckjcahnda00007gljg3yh0gko" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2020/12/09/Elasticsearch%E5%88%86%E5%B8%83%E5%BC%8F%E7%89%B9%E6%80%A7/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Elasticsearch分布式特性</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">December 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">November 2020</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2020/12/30/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-%E4%BC%98%E5%85%88%E7%BA%A7%E9%98%9F%E5%88%97-%E5%A0%86/">数据结构(优先级队列/堆)</a>
+          </li>
+        
+          <li>
+            <a href="/2020/12/09/Elasticsearch%E5%88%86%E5%B8%83%E5%BC%8F%E7%89%B9%E6%80%A7/">Elasticsearch分布式特性</a>
+          </li>
+        
+          <li>
+            <a href="/2020/11/24/ElasticSearch%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5%E4%B8%8E%E5%8E%9F%E7%90%86/">ElasticSearch基本概念与原理</a>
+          </li>
+        
+          <li>
+            <a href="/2020/11/16/%E7%AE%97%E6%B3%95-%E4%BA%8C%E5%88%86%E6%B3%95-%E4%B8%80/">算法-二分法(一)</a>
+          </li>
+        
+          <li>
+            <a href="/2020/11/14/ElasticSearch%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8(%E4%B8%80)/">ElasticSearch基本使用(一)：Get Started与复合查询</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2020 Larry Young<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+
+  
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+  </div>
+</body>
+</html>
