@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+
+  
+  <title>MIT6.824分布式系统Lab1-MapReduce | 多模型自适应混子的技术老巢</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="前言作为学习分布式系统的一门课程，MIT6.824一直都是国内外质量上乘的课程之一，知乎上很多经验丰富的软件开发人员也都是力推这门课程，而它的好处就是在于教授的授课是结合学生课前阅读论文、上课讲述思路以及课后的lab共同组成，会很大程度上的让学生独立地从0到1去实现一个编程模型，而不是仅仅使用各个厂家的框架。 那么我跟随的课程是2020春季学期的这门课程，课程地址为：https:&#x2F;&#x2F;pdos.cs">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MIT6.824分布式系统Lab1-MapReduce">
+<meta property="og:url" content="http://example.com/2020/12/31/MIT6-824%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9FLab1-MapReduce/index.html">
+<meta property="og:site_name" content="多模型自适应混子的技术老巢">
+<meta property="og:description" content="前言作为学习分布式系统的一门课程，MIT6.824一直都是国内外质量上乘的课程之一，知乎上很多经验丰富的软件开发人员也都是力推这门课程，而它的好处就是在于教授的授课是结合学生课前阅读论文、上课讲述思路以及课后的lab共同组成，会很大程度上的让学生独立地从0到1去实现一个编程模型，而不是仅仅使用各个厂家的框架。 那么我跟随的课程是2020春季学期的这门课程，课程地址为：https:&#x2F;&#x2F;pdos.cs">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2020-12-31T07:13:13.000Z">
+<meta property="article:modified_time" content="2021-01-03T11:20:41.298Z">
+<meta property="article:author" content="Larry Young">
+<meta name="twitter:card" content="summary">
+  
+    <link rel="alternate" href="/atom.xml" title="多模型自适应混子的技术老巢" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+<meta name="generator" content="Hexo 5.2.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">多模型自适应混子的技术老巢</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-MIT6-824分布式系统Lab1-MapReduce" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/12/31/MIT6-824%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9FLab1-MapReduce/" class="article-date">
+  <time datetime="2020-12-31T07:13:13.000Z" itemprop="datePublished">2020-12-31</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      MIT6.824分布式系统Lab1-MapReduce
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>作为学习分布式系统的一门课程，MIT6.824一直都是国内外质量上乘的课程之一，知乎上很多经验丰富的软件开发人员也都是力推这门课程，而它的好处就是在于教授的授课是结合学生课前阅读论文、上课讲述思路以及课后的lab共同组成，会很大程度上的让学生独立地从0到1去实现一个编程模型，而不是仅仅使用各个厂家的框架。</p>
+<p>那么我跟随的课程是2020春季学期的这门课程，课程地址为：<a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.824/schedule.html%EF%BC%8C%E5%9C%A8schedule%E7%95%8C%E9%9D%A2%E5%86%85%E4%BD%A0%E5%8F%AF%E4%BB%A5%E9%80%89%E6%8B%A9%E6%83%B3%E8%A6%81%E5%AE%8C%E6%88%90%E7%9A%84lab%E5%92%8C%E6%83%B3%E8%A6%81%E9%98%85%E8%AF%BB%E7%9A%84%E6%96%87%E7%8C%AE%E7%AD%89%E7%AD%89%EF%BC%8C%E5%9C%A8%E8%BF%99%E9%87%8C%E5%B0%B1%E4%B8%8D%E5%86%8D%E8%B5%98%E8%BF%B0%E4%BA%86%EF%BC%8C%E5%B0%B1%E7%9B%B4%E6%8E%A5%E5%88%87%E5%85%A5%E6%AD%A3%E9%A2%98%EF%BC%8C%E4%B9%9F%E5%B0%B1%E6%98%AF%E5%88%86%E5%B8%83%E5%BC%8F%E8%AE%A1%E7%AE%97%E6%A1%86%E6%9E%B6MapReduce%E7%9A%84lab%E5%AE%9E%E9%AA%8C%E9%83%A8%E5%88%86(**Go%E8%AF%AD%E8%A8%80%E5%AE%9E%E7%8E%B0**)%E3%80%82">https://pdos.csail.mit.edu/6.824/schedule.html，在schedule界面内你可以选择想要完成的lab和想要阅读的文献等等，在这里就不再赘述了，就直接切入正题，也就是分布式计算框架MapReduce的lab实验部分(**Go语言实现**)。</a></p>
+<ul>
+<li>注：其实Go很好上手，我实习的时候学了4天，然后下一周就进了项目，不会的童鞋可以参考Go语言之旅这个简短的教程来熟悉Go，地址是<a target="_blank" rel="noopener" href="https://tour.go-zh.org/list">https://tour.go-zh.org/list</a></li>
+</ul>
+<hr>
+<h2 id="MapReduce原理"><a href="#MapReduce原理" class="headerlink" title="MapReduce原理"></a>MapReduce原理</h2><p>如果你还没有读过<code>MapReduce</code>的论文，那么最好还是看一下，这样能够很快速的理解它的思想，我在这里就先总结一下。</p>
+<p>首先，<code>MapReduce</code>是一个能够处理和生成大量数据集的分布式的编程模型，它的结论就是通过给程序开发人员提供<code>map</code>和<code>reduce</code>两个函数来分别实现产生<code>(k,v)</code>中间结果和将相同<code>key</code>的数据进行汇总归并的操作，这样<code>map</code>和<code>reduce</code>两个函数其实就可以在不同的机器上进行运行，从而提高我们计算的效率。</p>
+<p>在论文中，最重要的部分也就是下面这张图：</p>
+<p>![](F:\YoungLH’s blog\source\images\MapReduce原理.jpg)</p>
+<p>这张图里面有几个比较重要的部分：</p>
+<ul>
+<li><p>Master进程</p>
+<p>它是用来分配任务给worker进程的角色，他来决定worker执行的是<code>map</code>函数还是<code>reduce</code>函数</p>
+</li>
+<li><p>worker进程</p>
+<p>如果worker进程执行的是<code>map</code>函数，那么它就要读取已经分片了的输入文件，处理文件内的每一行，然后将文件转换成<code>(k,v)</code>这样形式的中间文件；而如果它被指定为要执行<code>reduce</code>函数，那么worker就需要去读取中间文件(这个过程是通过<code>RPC</code>实现的)，然后对中间文件的<code>key</code>先做排序，然后根据排序的结果做归并的处理。</p>
+</li>
+</ul>
+<p>除此之外，就是还要留意一下中间文件的个数，这个个数是由用户程序指定的，然后怎么选择用哪个<code>reduce</code>程序执行是通过公式<code>hash(key) mod R</code>进行选择。</p>
+<hr>
+<h2 id="实验"><a href="#实验" class="headerlink" title="实验"></a>实验</h2><p>课程给出了相应的例子，具体的代码路径是<code>src\main\mrsequential.go</code>，这个例子给出的是非分布式版本的，而我们需要实现的是分布式版本的，具体来说我们需要完成<code>src\mr</code>下面的<code>master.go</code>, <code>worker.go</code>和<code>rpc.go</code>三个程序，</p>
+<p>首先，我从<code>worker</code>来开始着手写，每个<code>worker</code>都需要通过<code>rpc</code>和<code>master</code>进行通信来申请一个任务(具体是map还是reduce任务是由master来决定的)</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">// main/mrworker.go calls this function.</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">Worker</span><span class="params">(mapf <span class="keyword">func</span>(<span class="keyword">string</span>, <span class="keyword">string</span>)</span> []<span class="title">KeyValue</span>,</span></span><br><span class="line">	reducef <span class="function"><span class="keyword">func</span><span class="params">(<span class="keyword">string</span>, []<span class="keyword">string</span>)</span> <span class="title">string</span>)</span> &#123;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// Your worker implementation here.</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">// uncomment to send the Example RPC to the master.</span></span><br><span class="line">	<span class="comment">// CallExample()</span></span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这是作业中的Worker函数，我们也是需要在这个函数里实现我们的<code>worker</code>函数，那么思路就是：</p>
+<ul>
+<li>向<code>master</code>请求任务</li>
+<li>针对返回来的任务类型，做不同的处理<ul>
+<li>返回任务类型是<code>map</code>：调用<code>Map</code>函数</li>
+<li>返回任务类型是<code>reduce</code>：调用<code>Reduce</code>函数</li>
+<li>还有两种特殊情况，就是任务等待和任务终止，分别延时一段时间和直接返回</li>
+<li>默认情况抛异常</li>
+</ul>
+</li>
+</ul>
+<p>那么代码写出来就是这样的</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">// main/mrworker.go calls this function.</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">Worker</span><span class="params">(mapf <span class="keyword">func</span>(<span class="keyword">string</span>, <span class="keyword">string</span>)</span> []<span class="title">KeyValue</span>,</span></span><br><span class="line">	reducef <span class="function"><span class="keyword">func</span><span class="params">(<span class="keyword">string</span>, []<span class="keyword">string</span>)</span> <span class="title">string</span>)</span> &#123;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// Your worker implementation here.</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">// uncomment to send the Example RPC to the master.</span></span><br><span class="line">	<span class="comment">// CallExample()</span></span><br><span class="line">    <span class="keyword">for</span> &#123;</span><br><span class="line">        <span class="comment">//请求任务(rpc调用)</span></span><br><span class="line">        taskInfo := CallTask()</span><br><span class="line">        <span class="keyword">switch</span> taskInfo.State &#123;</span><br><span class="line">            <span class="keyword">case</span> <span class="number">0</span>:</span><br><span class="line">            	Map(mapf, )</span><br><span class="line">            	<span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> <span class="number">1</span>:</span><br><span class="line">            	Reduce(reducef, )</span><br><span class="line">            	<span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> <span class="number">2</span>:</span><br><span class="line">            	time.sleep(time.Duration(time.Second * <span class="number">10</span>))</span><br><span class="line">            	<span class="keyword">break</span>;</span><br><span class="line">        	<span class="keyword">case</span> <span class="number">3</span>:</span><br><span class="line">            	fmt.Println(<span class="string">&quot; all of tasks have completed, nothing to do...&quot;</span>)</span><br><span class="line">            	<span class="keyword">return</span></span><br><span class="line">            <span class="keyword">default</span>:</span><br><span class="line">            	<span class="built_in">panic</span>(<span class="string">&quot;Invaild State of Worker, Please try again....&quot;</span>)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>注意到这里面我们用到了<code>CallTask()</code>这个函数用来向master请求任务,在这个函数中我们需要调用提供给我们的<code>call()</code>函数，最后返回了一个<code>taskInfo</code>对象，根据对象中的<code>State</code>决定怎么样处理，那么我们在<code>worker.go</code>中先要实现<code>CallTask()</code>方法：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">CallTask</span><span class="params">()</span> *<span class="title">TaskInfo</span></span> &#123;</span><br><span class="line">    args := ExampleArgs&#123;&#125;</span><br><span class="line">    reply := TaskInfo&#123;&#125;</span><br><span class="line">    <span class="comment">//通过rpc调用Master的RequireTask方法</span></span><br><span class="line">    call(<span class="string">&quot;Master.RequireTask&quot;</span>, &amp;args, &amp;reply)</span><br><span class="line">    <span class="keyword">return</span> &amp;reply</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">call</span><span class="params">(rpcname <span class="keyword">string</span>, args <span class="keyword">interface</span>&#123;&#125;, reply <span class="keyword">interface</span>&#123;&#125;)</span> <span class="title">bool</span></span> &#123;</span><br><span class="line">	<span class="comment">// c, err := rpc.DialHTTP(&quot;tcp&quot;, &quot;127.0.0.1&quot;+&quot;:1234&quot;)</span></span><br><span class="line">    <span class="comment">//masterSock()方法是在rpc.go中，返回的是UNIX域下socket的名字</span></span><br><span class="line">	sockname := masterSock()</span><br><span class="line">	c, err := rpc.DialHTTP(<span class="string">&quot;unix&quot;</span>, sockname)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		log.Fatal(<span class="string">&quot;dialing:&quot;</span>, err)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">defer</span> c.Close()</span><br><span class="line"></span><br><span class="line">	err = c.Call(rpcname, args, reply)</span><br><span class="line">	<span class="keyword">if</span> err == <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">true</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	fmt.Println(err)</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">false</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>除了完成这两个函数，我们还需要定义一下<code>taskInfo</code>的内容，即<code>TaskInfo</code>类，写在<code>rpc.go</code>中：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> TaskInfo <span class="keyword">struct</span> &#123;</span><br><span class="line">    <span class="comment">/*** state value </span></span><br><span class="line"><span class="comment">    * 0 --&gt; map</span></span><br><span class="line"><span class="comment">      1 --&gt; reduce</span></span><br><span class="line"><span class="comment">      2 --&gt; wait</span></span><br><span class="line"><span class="comment">      3 --&gt; nothing to do</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">    State        <span class="keyword">int</span></span><br><span class="line">    <span class="comment">//要读取的文件名</span></span><br><span class="line">    FileName     <span class="keyword">string</span></span><br><span class="line">    <span class="comment">//经过map后输出到哪个file中--&gt;针对map</span></span><br><span class="line">    FileIdx      <span class="keyword">int</span> </span><br><span class="line">    <span class="comment">//要写到哪个文件--&gt;针对reduce</span></span><br><span class="line">    OutFileIdx   <span class="keyword">int</span></span><br><span class="line">    <span class="comment">//分成几个reduce</span></span><br><span class="line">    ReduceNum    <span class="keyword">int</span></span><br><span class="line">    FileNum      <span class="keyword">int</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>完成了上面步骤之后，现在就需要回到<code>Worker</code>方法中，然后我们需要进入到<code>switch</code>中，看到我们还有两个函数没有实现，即<code>Map</code>和<code>Reduce</code>：对于前者而言，输入的参数除了一个<code>mapf</code>函数之外，还需要把任务信息传递进来，因为任务信息包含了你要读入文件的名称和<code>index</code>。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">Map</span><span class="params">(mapf <span class="keyword">func</span>(<span class="keyword">string</span>, <span class="keyword">string</span>)</span> []<span class="title">KeyValue</span>, <span class="title">taskInfo</span> *<span class="title">TaskInfo</span>)</span> &#123;</span><br><span class="line">    <span class="comment">//根据文件名读文件，并将调用mapf之后输出的kv保存在中间数组中</span></span><br><span class="line">    interFile := []KeyValue</span><br><span class="line">    file, err := os.Open(taskInfo.FileName)</span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">        <span class="built_in">panic</span>(err)</span><br><span class="line">    &#125;</span><br><span class="line">    content, err := ioutil.ReadAll(file)</span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">        <span class="built_in">panic</span>(err)</span><br><span class="line">    &#125;</span><br><span class="line">    file.Close()</span><br><span class="line">    kvs := mapf(taskInfo.FileName, <span class="keyword">string</span>(content))</span><br><span class="line">    interFile = <span class="built_in">append</span>(interFile, kvs...)</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//准备输出文件</span></span><br><span class="line">    outPrefix = <span class="string">&quot;mr-tmp/mr-&quot;</span></span><br><span class="line">    outPrefix += strconv.Itoa(taskInfo.FileIdx)</span><br><span class="line">    outFiles := <span class="built_in">make</span>([]*os.File, taskInfo.ReduceNum)</span><br><span class="line">    outFilesEncode := <span class="built_in">make</span>([]*json.Encoder, taskInfo.ReduceNum)</span><br><span class="line">    <span class="keyword">for</span> idx := <span class="number">0</span>; idx &lt; taskInfo.ReduceNum; idx++ &#123;</span><br><span class="line">        <span class="comment">//在mr-tmp文件夹下生成空的临时文件并设置编码</span></span><br><span class="line">        outFiles[idx], _ = ioutil.TempFile(<span class="string">&quot;mr-tmp&quot;</span>, <span class="string">&quot;mr-tmp-*&quot;</span>)</span><br><span class="line">        outFilesEncode[idx] = json.NewEncoder(outFiles[idx])</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//依据不同的key路由存储到到不同的文件中去</span></span><br><span class="line">    <span class="keyword">for</span> _, kv := <span class="keyword">range</span> interFile &#123;</span><br><span class="line">        outputIdx := ihash(kv.Key) % taskInfo.ReduceNum</span><br><span class="line">        file = outFiles[outputIdx]</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//保存文件</span></span><br><span class="line">    <span class="keyword">for</span> idx, file := <span class="keyword">range</span> outFiles &#123;</span><br><span class="line">        outName := outPrefix + strconv.Itoa(idx)</span><br><span class="line">        oldPath := filepath.Join(file.Name())</span><br><span class="line">        os.Rename(oldPath, outname)</span><br><span class="line">        file.Close()</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//通知master我map做完了</span></span><br><span class="line">    TaskDone(taskInfo)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">Reduce</span><span class="params">(reducef <span class="keyword">func</span>(<span class="keyword">string</span>, []<span class="keyword">string</span>)</span> <span class="title">string</span>, <span class="title">taskInfo</span> *<span class="title">TaskInfo</span>)</span> &#123;</span><br><span class="line">    outName := <span class="string">&quot;mr-out-&quot;</span> + strconv.Itoa(taskInfo.OutFileIdx)</span><br><span class="line">    interPrefix := <span class="string">&quot;mr-tmp/mr-&quot;</span></span><br><span class="line">    interSuffix := <span class="string">&quot;-&quot;</span> + strconv.Itoa(taskInfo.OutFileIdx)</span><br><span class="line">    </span><br><span class="line">    interFile := []KeyValue&#123;&#125;</span><br><span class="line">    <span class="keyword">for</span> idx := <span class="number">0</span>; idx &lt; taskInfo.FileNum; idx++ &#123;</span><br><span class="line">        inname := interPrefix + strconv.Itoa(idx) + interSuffix</span><br><span class="line">		file, err := os.Open(inname)</span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			fmt.Printf(<span class="string">&quot;Open intermediate file %v failed: %v\n&quot;</span>, inname, err)</span><br><span class="line">			<span class="built_in">panic</span>(<span class="string">&quot;Open file error&quot;</span>)</span><br><span class="line">		&#125;</span><br><span class="line">		dec := json.NewDecoder(file)</span><br><span class="line">		<span class="keyword">for</span> &#123;</span><br><span class="line">			<span class="keyword">var</span> kv KeyValue</span><br><span class="line">			<span class="keyword">if</span> err := dec.Decode(&amp;kv); err != <span class="literal">nil</span> &#123;</span><br><span class="line">				<span class="keyword">break</span></span><br><span class="line">			&#125;</span><br><span class="line">			</span><br><span class="line">			interFile = <span class="built_in">append</span>(interFile, kv)</span><br><span class="line">		&#125;</span><br><span class="line">		file.Close()</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    sort.Sort(ByKey(interFile))</span><br><span class="line">    </span><br><span class="line">    ofile, err := ioutil.TempFile(<span class="string">&quot;mr-tmp&quot;</span>, <span class="string">&quot;mr-*&quot;</span>)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		fmt.Printf(<span class="string">&quot;Create output file %v failed: %v\n&quot;</span>, outname, err)</span><br><span class="line">		<span class="built_in">panic</span>(<span class="string">&quot;Create file error&quot;</span>)</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">	i := <span class="number">0</span></span><br><span class="line">	<span class="keyword">for</span> i &lt; <span class="built_in">len</span>(intermediate) &#123;</span><br><span class="line">		j := i + <span class="number">1</span></span><br><span class="line">		<span class="keyword">for</span> j &lt; <span class="built_in">len</span>(interFile) &amp;&amp; interFile[j].Key == interFile[i].Key &#123;</span><br><span class="line">			j++</span><br><span class="line">		&#125;</span><br><span class="line">		values := []<span class="keyword">string</span>&#123;&#125;</span><br><span class="line">		<span class="keyword">for</span> k := i; k &lt; j; k++ &#123;</span><br><span class="line">			values = <span class="built_in">append</span>(values, interFile[k].Value)</span><br><span class="line">		&#125;</span><br><span class="line">		output := reducef(interFile[i].Key, values)</span><br><span class="line"></span><br><span class="line">		fmt.Fprintf(ofile, <span class="string">&quot;%v %v\n&quot;</span>, intermediate[i].Key, output)</span><br><span class="line"></span><br><span class="line">		i = j</span><br><span class="line">	&#125;</span><br><span class="line">	os.Rename(filepath.Join(ofile.Name()), outName)</span><br><span class="line">	ofile.Close()</span><br><span class="line">	<span class="comment">// acknowledge master</span></span><br><span class="line">	TaskDone(taskInfo)</span><br><span class="line">&#125; </span><br></pre></td></tr></table></figure>
+
+<p>这样，我们就完成了<code>worker.go</code>的内容，现在我们需要考虑<code>master.go</code>的结构。</p>
+<p>首先我们都知道每个任务都包含的信息都已经写在了<code>rpc.go/TaskInfo</code>中,但是在master中，我们得管理每一个任务，因此我们就需要有一个类来保存任务的状态：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> TaskStat <span class="keyword">struct</span>&#123;</span><br><span class="line">    fileName       <span class="keyword">string</span></span><br><span class="line">    startTime      time.Time</span><br><span class="line">    fileIndex      <span class="keyword">int</span></span><br><span class="line">    outFileIndex <span class="keyword">int</span></span><br><span class="line">    reduceNum      <span class="keyword">int</span></span><br><span class="line">    fileNum        <span class="keyword">int</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>然后还要定义两个类继承这个任务信息类</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> MapTask <span class="keyword">struct</span> &#123;</span><br><span class="line">    TaskStat</span><br><span class="line">&#125; </span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> ReduceTask <span class="keyword">struct</span> &#123;</span><br><span class="line">    TaskStat</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>有了对应的实现类以后我们还需要定义对外的接口，以提供获取任务信息的功能</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> TaskInfoInterface <span class="keyword">interface</span> &#123;</span><br><span class="line">    GenerateTask()      TaskInfo</span><br><span class="line">    OutOfTime()         <span class="keyword">bool</span></span><br><span class="line">    GetFileIndex()      <span class="keyword">int</span></span><br><span class="line">    GetOutFileIndex()   <span class="keyword">int</span></span><br><span class="line">    SetTime()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>所有的任务类都要实现上面的方法</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(this *MapTask)</span> <span class="title">GenerateTaskInfo</span><span class="params">()</span> <span class="title">TaskInfo</span></span> &#123;</span><br><span class="line">    <span class="keyword">return</span> TaskInfo &#123;</span><br><span class="line">        State: <span class="number">0</span></span><br><span class="line">        FileName:   this.fileName</span><br><span class="line">        FileIdx:    this.fileIndex</span><br><span class="line">        OutFileIdx: this.outFileIndex</span><br><span class="line">        ReduceNum:  this.reduceNum</span><br><span class="line">        FileNum:    this.fileNum</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(this *ReduceTask)</span> <span class="title">GenerateTaskInfo</span><span class="params">()</span> <span class="title">TaskInfo</span></span> &#123;</span><br><span class="line">    <span class="keyword">return</span> TaskInfo &#123;</span><br><span class="line">        State: <span class="number">1</span></span><br><span class="line">        FileName:   this.fileName</span><br><span class="line">        FileIdx:    this.fileIndex</span><br><span class="line">        OutFileIdx: this.outFileIndex</span><br><span class="line">        ReduceNum:  this.reduceNum</span><br><span class="line">        FileNum:    this.fileNum</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(this *TaskStat)</span> <span class="title">OutOfTime</span><span class="params">()</span> <span class="title">bool</span></span> &#123;</span><br><span class="line">    <span class="keyword">return</span> time.Now().Sub(this.startTime) &gt; time.Duration(time, Second * <span class="number">60</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(this *TaskStat)</span> <span class="title">GetFileIndex</span><span class="params">()</span> <span class="title">int</span></span> &#123;</span><br><span class="line">    <span class="keyword">return</span> this.fileIndex</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(this *TaskStat)</span> <span class="title">GetOutFileIndex</span> <span class="title">int</span></span> &#123;</span><br><span class="line">    <span class="keyword">return</span> this.outFileIndex</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(this *TaskStat)</span> <span class="title">SetTime</span><span class="params">()</span></span> &#123;</span><br><span class="line">    this.startTime = time.Now()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>除此之外我们定义一下<code>master</code>类和两个由<code>worker</code>请求的方法：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> Master <span class="keyword">struct</span> &#123;</span><br><span class="line">    fileNames []<span class="keyword">string</span></span><br><span class="line">    </span><br><span class="line">    mapRunningTaskChannel <span class="keyword">chan</span> TaskStat</span><br><span class="line">    mapWaitingTaskChannel <span class="keyword">chan</span> TaskStat</span><br><span class="line">    reduceRunningTaskChannel <span class="keyword">chan</span> TaskStat</span><br><span class="line">    reduceWaitingTaskChannel <span class="keyword">chan</span> TaskStat</span><br><span class="line">    </span><br><span class="line">    isDone <span class="keyword">bool</span></span><br><span class="line">    reduceNum <span class="keyword">int</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(this *Master)</span> <span class="title">RequireTask</span><span class="params">(args *ExampleArgs, reply *TaskInfo)</span> <span class="title">error</span></span> &#123;</span><br><span class="line">    <span class="keyword">if</span> this.isDone &#123;</span><br><span class="line">        reply.State = <span class="number">3</span></span><br><span class="line">        <span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    mapTask := &lt;- mapWaitingTaskChannel</span><br><span class="line">        </span><br><span class="line">    <span class="keyword">if</span> mapTask != <span class="literal">nil</span> &#123;</span><br><span class="line">        mapTask.setTime()</span><br><span class="line">        mapRunningTaskChannel &lt;- mapTask</span><br><span class="line">        *reply = mapTask.GenerateTaskInfo()</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    reduceTask := &lt;- reduceWaitingTaskChannel</span><br><span class="line">    <span class="keyword">if</span> reduceTask != <span class="literal">nil</span> &#123;</span><br><span class="line">        reduceTask.setTime()</span><br><span class="line">        reduceRunningTaskChannel &lt;- reduceTask</span><br><span class="line">        *reply = reduceTask.GenerateTaskInfo()</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">len</span>(this.mapRunningTaskChannel) &gt; <span class="number">0</span> || <span class="built_in">len</span>(this.reduceRunningTaskChannel) &gt; <span class="number">0</span> &#123;</span><br><span class="line">        reply.State = <span class="number">2</span></span><br><span class="line">        <span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    replr.State = <span class="number">3</span></span><br><span class="line">    this.isDone = <span class="literal">true</span></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">   </span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(this *Master)</span> <span class="title">TaskDone</span><span class="params">(args *TaskInfo, reple *ExampleReply)</span>  <span class="title">error</span></span> &#123;</span><br><span class="line">    <span class="keyword">switch</span> args.State &#123;</span><br><span class="line">        <span class="keyword">case</span> <span class="number">0</span>:</span><br><span class="line">            mapTask := &lt;- mapRunningTaskChannel</span><br><span class="line">            <span class="keyword">if</span> <span class="built_in">len</span>(this.mapRunningTaskChannel) == <span class="number">0</span> &amp;&amp; <span class="built_in">len</span>(this.mapWaitingTaskChannel) == <span class="number">0</span> &#123;</span><br><span class="line">                this.distributeReduce()</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">break</span></span><br><span class="line">    	<span class="keyword">case</span> <span class="number">1</span>:</span><br><span class="line">        	reduceTask := &lt;- reduceRunningTaskChannel</span><br><span class="line">        	<span class="keyword">break</span></span><br><span class="line">        <span class="keyword">default</span>:</span><br><span class="line">        	pannic(<span class="string">&quot;task error&quot;</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(this *Master)</span> <span class="title">distributeReduce</span><span class="params">()</span></span> &#123;</span><br><span class="line">	reduceTask := ReduceTaskStat&#123;</span><br><span class="line">		TaskStat&#123;</span><br><span class="line">			fileIndex: <span class="number">0</span>,</span><br><span class="line">			outFileIndex: <span class="number">0</span>,</span><br><span class="line">			ReduceNum:   this.ReduceNum,</span><br><span class="line">			fileNum:    <span class="built_in">len</span>(this.filenames),</span><br><span class="line">		&#125;,</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">for</span> reduceIndex := <span class="number">0</span>; reduceIndex &lt; this.nReduce; reduceIndex++ &#123;</span><br><span class="line">		task := reduceTask</span><br><span class="line">		task.partIndex = reduceIndex</span><br><span class="line">		reduceWaitingTaskChannel &lt;- task</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>那么到此为止呢，实验的大部分内容我也都写完了，主要思路也是借鉴了<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/260752052%E5%92%8Chttps://zhuanlan.zhihu.com/p/54243727%E4%B8%A4%E7%AF%87%E4%B8%93%E6%A0%8F%E7%9A%84%E6%80%9D%E8%B7%AF%EF%BC%8C%E4%B8%BB%E8%A6%81%E4%B8%8D%E5%90%8C%E7%82%B9%E5%B0%B1%E6%98%AF%E5%9C%A8%E4%BA%8E%E5%9C%A8%E5%AE%9E%E7%8E%B0%E7%9A%84%E4%BB%BB%E5%8A%A1%E9%98%9F%E5%88%97%E7%9A%84%E6%97%B6%E5%80%99%E5%88%A9%E7%94%A8%E4%BA%86go%E7%9A%84channel%E7%89%B9%E6%80%A7%EF%BC%8C%E5%85%B6%E4%BD%99%E7%9A%84%E6%80%9D%E8%B7%AF%E9%83%A8%E5%88%86%E9%83%BD%E6%98%AF%E5%BE%88%E7%9B%B8%E4%BC%BC%E7%9A%84%E3%80%82">https://zhuanlan.zhihu.com/p/260752052和https://zhuanlan.zhihu.com/p/54243727两篇专栏的思路，主要不同点就是在于在实现的任务队列的时候利用了go的channel特性，其余的思路部分都是很相似的。</a></p>
+<hr>
+<p>参考连接：</p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/260752052">https://zhuanlan.zhihu.com/p/260752052</a></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/54243727">https://zhuanlan.zhihu.com/p/54243727</a></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2020/12/31/MIT6-824%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9FLab1-MapReduce/" data-id="ckjh1npas000054ljgecf0qcr" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2020/12/30/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-%E4%BC%98%E5%85%88%E7%BA%A7%E9%98%9F%E5%88%97-%E5%A0%86/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">数据结构(优先级队列/堆)</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">December 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">November 2020</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2020/12/31/MIT6-824%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9FLab1-MapReduce/">MIT6.824分布式系统Lab1-MapReduce</a>
+          </li>
+        
+          <li>
+            <a href="/2020/12/30/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-%E4%BC%98%E5%85%88%E7%BA%A7%E9%98%9F%E5%88%97-%E5%A0%86/">数据结构(优先级队列/堆)</a>
+          </li>
+        
+          <li>
+            <a href="/2020/12/09/Elasticsearch%E5%88%86%E5%B8%83%E5%BC%8F%E7%89%B9%E6%80%A7/">Elasticsearch分布式特性</a>
+          </li>
+        
+          <li>
+            <a href="/2020/11/24/ElasticSearch%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5%E4%B8%8E%E5%8E%9F%E7%90%86/">ElasticSearch基本概念与原理</a>
+          </li>
+        
+          <li>
+            <a href="/2020/11/16/%E7%AE%97%E6%B3%95-%E4%BA%8C%E5%88%86%E6%B3%95-%E4%B8%80/">算法-二分法(一)</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2021 Larry Young<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+
+  
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+  </div>
+</body>
+</html>
