@@ -146,6 +146,171 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/01/31/HTTP%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Larry Young">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="多模型自适应混子的技术老巢">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/01/31/HTTP%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86/" class="post-title-link" itemprop="url">HTTP长连接实现原理</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2021-01-31 19:29:29 / Modified: 19:32:50" itemprop="dateCreated datePublished" datetime="2021-01-31T19:29:29+08:00">2021-01-31</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="1-HTTP长连接和短连接的定义"><a href="#1-HTTP长连接和短连接的定义" class="headerlink" title="1. HTTP长连接和短连接的定义"></a>1. HTTP长连接和短连接的定义</h2><ul>
+<li><p>HTTP长连接</p>
+<ul>
+<li><p>浏览器向服务器进行一次HTTP会话访问后，并不会直接关闭这个连接，而是会默认保持一段时间，那么下一次浏览器继续访问的时候就会再次利用到这个连接。</p>
+</li>
+<li><p>在<code>HTTP/1.1</code>版本中，默认的连接都是长连接，我们可以通过<code>Connection: keep-alive</code>字段进行指定。</p>
+</li>
+</ul>
+</li>
+<li><p>HTTP短连接</p>
+<ul>
+<li>浏览器向服务器每进行一次HTTP操作都要建立一个新的连接。</li>
+<li>在<code>HTTP/1.0</code>版本中默认是短链接</li>
+</ul>
+</li>
+</ul>
+<h2 id="2-HTTP长连接本质"><a href="#2-HTTP长连接本质" class="headerlink" title="2.  HTTP长连接本质"></a>2.  HTTP长连接本质</h2><p>​    HTTP协议本质是OSI七层参考模型中的应用层协议，而网络进行通信的时候都是通过上层协议封装头部后作为下层协议的数据部分进行封装的，而实际中我们经常接触的是TCP/IP协议簇，也就是传输层利用TCP协议和网络层利用IP协议。因此HTTP协议的长连接本质上就是TCP的长连接。</p>
+<h3 id="2-1-TCP建立连接回顾"><a href="#2-1-TCP建立连接回顾" class="headerlink" title="2.1 TCP建立连接回顾"></a>2.1 TCP建立连接回顾</h3><p>  上面我们提到了TCP，那么回顾一下，通信双方在进行通信的时候就是要通过“三次握手“来建立连接的，握手的过程大致如图1所示：</p>
+<p><img src="/2021/01/31/HTTP%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86/..%5Cimages%5CTCP%E4%B8%89%E6%AC%A1%E6%8F%A1%E6%89%8B.png" alt=" "></p>
+<p>​                                                                                图1. TCP建立连接</p>
+<p>那么通过上图我们就可以清楚的看到，服务器和客户端都建立了一个<code>TCB</code>传输控制块，这里就是我们进行<code>socket</code>编程的时候管理连接的地方，在这里我们先标记这个<code>TCB</code>,在后续的文章，我们会详细介绍在Linux中<code>TCB</code>是怎么样管理连接的。</p>
+<h3 id="2-2-TCP释放连接回顾"><a href="#2-2-TCP释放连接回顾" class="headerlink" title="2.2  TCP释放连接回顾"></a>2.2  TCP释放连接回顾</h3><p>​    在回顾了TCP连接建立之后，我们不妨再来看看TCP四次挥手，如图2所示：</p>
+<img src="/2021/01/31/HTTP%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86/images\TCP四次挥手.png" alt="image-20210131175008747" style="zoom:200%;">
+
+<p>​                                                                                   图2. TCP释放连接</p>
+<p>TCP连接的释放是看通信双方谁是主动关闭的一方，谁是被动关闭的一方来决定各自状态的，具体的内容大家依然可以参考《TCP/IP详解》，这里就不再赘述了。</p>
+<h3 id="2-3-TCP长连接"><a href="#2-3-TCP长连接" class="headerlink" title="2.3 TCP长连接"></a>2.3 TCP长连接</h3><p>​    在建立了TCP连接之后，这也就到了这篇文章中比较核心的问题，就是说TCP连接建立之后，并不会在完成一次数据通信后就关闭连接，而是要保持一段时间，那么这个时间是怎么样保证，又是谁保证的呢？</p>
+<h4 id="2-3-1-TCP保活机制"><a href="#2-3-1-TCP保活机制" class="headerlink" title="2.3.1 TCP保活机制"></a>2.3.1 TCP保活机制</h4><ul>
+<li><p>为什么要有保活机制？</p>
+<ul>
+<li>第一点自然是我们这篇文章的主题，通过保活机制，我们可以保证通讯双方的连接不被释放掉</li>
+<li>第二点就是在另一些情况下，如果客户端或者服务器发生了错误或者宕机，那么就可以依靠这种保活机制探测出网络通信出现了问题，进而可以释放掉这种错误连接。</li>
+</ul>
+</li>
+<li><p>保活机制</p>
+<p>  首先保活机制的工作原理就是，通过在服务器端设置一个保活定时器，当定时器开始工作后就定时的向网络通信的另一端发出保活探测的TCP报文，如果接收到了ACK报文，那么就证明对方存活，可以继续保有连接；否则就证明网络存在故障。</p>
+<p>  上面只是在原理层面简单的介绍，根据文献[1]，我们可以了解到详细的内容：</p>
+<ul>
+<li>如果一个给定的连接在两个小时之内没有任何动作，则服务器就向客户发送一个探查报文段。客户主机必须处于以下 4个状态之一。<ul>
+<li>状态1：客户主机依然正常运行，并从服务器可达。客户的TCP响应正常，而服务器也知道对方是正常工作的。服务器在两小时以后将保活定时器复位。如果在两个小时定时器到时间之前有应用程序的通信量通过此连接，则定时器在交换数据后的未来2小时再复位。</li>
+<li>状态2：客户主机已经崩溃，并且关闭或者正在重新启动。在任何一种情况下，客户的TCP都没有响应。服务器将不能够收到对探查的响应，并在75秒后超时。服务器总共发送10个这样的探查，每个间隔75秒。如果服务器没有收到一个响应，它就认为客户主机已经关闭并终止连接。</li>
+<li>状态3：客户主机崩溃并已经重新启动。这时服务器将收到一个对其保活探查的响应，但是这个响应是一个复位，使得服务器终止这个连接。</li>
+<li>状态4：客户主机正常运行，但是从服务器不可达。这与状态2相同，因为TCP不能够区分状态4与状态2之间的区别，它所能发现的就是没有收到探查的响应。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>实际应用</p>
+<p> 那么我们在了解了理论上TCP长连接是通过保活机制来实现的，但是保活机制并不是RFC规定的TCP协议的内容，因此有时候在不支持保活机制的机器上，往往我们也需要先看一下内核层面是否支持，如果不支持需要在应用层自己去实现这个功能。</p>
+<p>  在这里我们就来看一下Linux相关的TCP保活参数</p>
+<ul>
+<li><p><code>tcp_keepalive_time</code>，单位：秒，表示发送的探测报文之前的连接空闲时间，默认是7200s。</p>
+</li>
+<li><p><code>tcp_keepalive_intvl</code>，单位：秒，表示两次探测报文之间的间隔时间，默认是75s</p>
+</li>
+<li><p><code>tcp_keepalive_probes</code>，单位，秒，表示探测的次数，默认是9</p>
+<p>接下来如果我们需要在应用层写自己的心跳机制，那么就需要其他方面的一些内容了，这部分内容我也打算在另一篇文章中阐述，毕竟在分布式大行其道的今天，多个微服务之间的和注册中心之间的通信也是包含心跳机制的，所以这里就先挖个坑，以后会单独进行描述。</p>
+</li>
+</ul>
+</li>
+</ul>
+<h4 id="2-3-2-TCP长连接和短链接比较"><a href="#2-3-2-TCP长连接和短链接比较" class="headerlink" title="2.3.2 TCP长连接和短链接比较"></a>2.3.2 TCP长连接和短链接比较</h4><ul>
+<li><p>TCP短链接</p>
+<ul>
+<li>优点<ul>
+<li>短链接不占服务器的内存，服务器能处理的连接数量会比较多</li>
+</ul>
+</li>
+<li>缺点<ul>
+<li>在有实际的资源要进行数据通信的时候才建立连接，那么在客户端发送完数据释放连接之后当服务器有向客户端发送数据时就不能做到发送消息的实时性。</li>
+<li>频繁地建立连接、释放连接会耗费大量的CPU和网络带宽资源。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>TCP长连接<a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_41453285/article/details/107235340">[2]</a></p>
+</li>
+</ul>
+<ul>
+<li><p>优点</p>
+<ul>
+<li>通信双方因为在保活机制的保证下可以保证数据收发的实时性</li>
+</ul>
+</li>
+<li><p>缺点</p>
+<ul>
+<li>因为服务器需要一直保存和客户端的这条链接，因为是有状态的，那么在大量并发连接请求过来时，系统资源可能就不够了。</li>
+</ul>
+</li>
+<li><p>什么时候需要长连接</p>
+<ul>
+<li>服务器需要主动发送资源给客户端时</li>
+<li>客户端和服务器通信很频繁时</li>
+<li>客户端宕机或者掉线时需要服务器做一些处理时</li>
+</ul>
+</li>
+<li><p>TCP长连接设计时需要考虑的问题</p>
+<ul>
+<li>默认的<code>keep-alive</code>时间比较长，一般的业务可能不需要这么久的时间</li>
+<li><code>socket proxy</code>会让TCP的保活失效：多有的proxy应用只能转发TCP的应用数据，不能转发TCP协议内部的包</li>
+</ul>
+<p>这些问题就需要在心跳检测中进行实现，关于心跳机制的实现，请见后续的文章。</p>
+</li>
+</ul>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><p>[1] TCP/IP详解 卷1 协议</p>
+<p>[2]<a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_41453285/article/details/107235340">https://blog.csdn.net/qq_41453285/article/details/107235340</a></p>
+<p>[3]<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/a697e504b1ab">https://www.jianshu.com/p/a697e504b1ab</a></p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
     <link itemprop="mainEntityOfPage" href="http://example.com/2020/12/31/MIT6-824%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9FLab1-MapReduce/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1503,12 +1668,12 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">6</span>
+          <span class="site-state-item-count">7</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
       <div class="site-state-item site-state-tags">
-        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-count">4</span>
         <span class="site-state-item-name">tags</span>
       </div>
   </nav>
