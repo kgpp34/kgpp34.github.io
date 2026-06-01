@@ -1,0 +1,14 @@
+{{ partial "header.html" . }}
+
+<div class="home-cover">
+  <a href="https://github.com/kgpp34" target="_blank" rel="noopener">
+    <img src="/github.svg" alt="GitHub profile" />
+  </a>
+
+  <h1>{{ site.Params.name | default site.Title }}</h1>
+  <h2><em>Always had my own game plan</em></h2>
+
+  {{ .Content }}
+</div>
+
+{{ partial "footer.html" . }}
