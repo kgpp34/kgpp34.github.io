@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+	<channel>
+		<title>Posts on kgpp34 space</title>
+		<link>http://localhost:1313/posts/</link>
+		<description>Recent content in Posts on kgpp34 space</description>
+		<generator>Hugo</generator>
+		<language>zh-CN</language>
+		
+		
+		
+		
+			<lastBuildDate>Mon, 01 Jun 2026 15:43:52 +0800</lastBuildDate>
+		
+			<atom:link href="http://localhost:1313/posts/index.xml" rel="self" type="application/rss+xml" />
+			<item>
+				<title>Etcd Raft 01</title>
+				<link>http://localhost:1313/posts/etcd-raft-01/</link>
+				<pubDate>Mon, 01 Jun 2026 15:43:52 +0800</pubDate>
+				<guid>http://localhost:1313/posts/etcd-raft-01/</guid>
+				<description>&lt;h1 id=&#34;raft-leader-election-原理解析&#34;&gt;Raft Leader Election 原理解析&lt;/h1&gt;&#xA;&lt;p&gt;这篇文章主要想系统梳理一下 Raft Leader Election（Leader 选举）的核心原理。&lt;/p&gt;&#xA;&lt;p&gt;在分布式系统领域，&lt;a href=&#34;https://raft.github.io/raft.pdf&#34; title=&#34;In Search of an Understandable Consensus Algorithm(Extended Version)&#34;&gt;Raft&lt;/a&gt; 是一个非常经典的共识算法。相比 Paxos，Raft 最大的特点是“可理解性（Understandability）”，它将复杂的共识问题拆分为了几个相对独立的子问题：&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;Leader Election（Leader 选举）&lt;/li&gt;&#xA;&lt;li&gt;Log Replication（日志复制）&lt;/li&gt;&#xA;&lt;li&gt;Safety（安全性保证）&lt;/li&gt;&#xA;&lt;li&gt;Membership Change（成员变更）&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;p&gt;其中，Leader Election 是整个 Raft 的起点，因为在 Raft 中，整个集群只能存在一个节点负责“做决定”，这个节点就是 Leader。&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h1 id=&#34;1-为什么需要-leader&#34;&gt;1. 为什么需要 Leader&lt;/h1&gt;&#xA;&lt;p&gt;一个分布式系统想要对外提供服务，往往需要由多个节点组成一个分布式集群。而一旦系统进入分布式环境后，就必须面对一个核心问题：如何保证多个节点之间的数据一致性。&lt;/p&gt;&#xA;&lt;p&gt;例如：&lt;/p&gt;&#xA;&lt;pre&gt;&lt;code class=&#34;language-text&#34;&gt;Client A: set x = 1&#xA;Client B: set x = 2&#xA;&lt;/code&gt;&lt;/pre&gt;&#xA;&lt;p&gt;如果多个节点都能同时处理写请求，那么网络延迟、消息乱序、节点宕机、网络分区等问题，都可能导致各节点最终状态出现分歧，这就是经典的分布式一致性（Consensus）问题。&lt;/p&gt;&#xA;&lt;p&gt;Raft 对这个问题的解决方案是使用复制状态机（Replicated State Machine）模型。它并不直接同步“状态”，而是同步操作日志（Replicated Log）：&lt;/p&gt;&#xA;&lt;pre&gt;&lt;code class=&#34;language-text&#34;&gt;set x = 1&#xA;set y = 2&#xA;delete z&#xA;&lt;/code&gt;&lt;/pre&gt;&#xA;&lt;p&gt;只要所有节点：&lt;/p&gt;</description>
+			</item>
+	</channel>
+</rss>
