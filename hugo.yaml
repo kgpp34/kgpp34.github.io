@@ -1,6 +1,6 @@
 title: "kgpp34 space"
 baseURL: "https://kgpp34.github.io/"
-publishDir: "."
+publishDir: "docs"
 locale: "zh-CN"
 ignoreFiles: ["\\.DS_Store$"]
 
