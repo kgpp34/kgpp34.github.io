@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>K8s Multiple CNI Solution: Multus | kgpp34 space</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/katex.min.css"
+  integrity="sha384-3UiQGuEI4TTMaFmGIZumfRPtfKQ3trwQE2JgosJxCnGmQpL/lJdjpcHkaaFwHlcI"
+  crossorigin="anonymous"
+/>
+<script
+  defer
+  src="https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/katex.min.js"
+  integrity="sha384-G0zcxDFp5LWZtDuRMnBkk3EphCK1lhEf4UEyEM693ka574TZGwo4IWwS6QLzM/2t"
+  crossorigin="anonymous"
+></script>
+<script
+  defer
+  src="https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/contrib/auto-render.min.js"
+  integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05"
+  crossorigin="anonymous"
+></script>
+
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/about/">About</a></li>
+      
+      <li><a href="/posts/">Posts</a></li>
+      
+      <li><a href="/tags/">Tags</a></li>
+      
+      <li><a href="/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">K8s Multiple CNI Solution: Multus</span></h1>
+
+<h2 class="date">2026/06/11</h2>
+</div>
+
+<main>
+<h1 id="1-为什么需要多网卡">1. 为什么需要多网卡</h1>
+<p>传统微服务场景下，东西向网络流量通常不需要特别大的带宽，采用常规网卡即可满足需求。但在 AI 场景或其它高性能场景下，传统网卡就显得不够用了。因此，一种常见的做法是将流量分离：传统业务流量和管理流量依然走传统网卡，而其它流量走特定的网卡。然而，Kubernetes 默认的网络模型仅会给 Pod 分配一个网卡。要提供多网卡，必须有一种机制将不同的网卡设备也挂载到 Pod 的网络命名空间（netns）中。实现这种效果需要使用多 CNI，目前工业界普遍采用的成熟开源方案是 <strong>Multus</strong>。</p>
+<h1 id="2-cni-基础原理">2. CNI 基础原理</h1>
+<p>要想了解 Multus CNI 是如何在现有 CNI 机制上进行扩展的，需要先简单了解相关的背景知识和 CNI 的基础内容。</p>
+<h2 id="21-netns-网络命名空间">2.1 netns 网络命名空间</h2>
+<p>Linux 会把网络虚拟化成独立的 netns。每个 netns 拥有独立的：</p>
+<ul>
+<li>网络接口列表</li>
+<li>路由表</li>
+<li>iptables 规则链</li>
+<li>socket 表</li>
+<li>/proc/sys/net/ 参数</li>
+</ul>
+<p>网络接口/设备可以在 netns 之间移动（通过 <code>ip link set eth0 netns &lt;pid&gt;</code>），但移动后原 netns 就看不到它了。veth pair 是例外——veth 是成对创建的，一端在 host netns，一端在 Pod netns，两端之间形成一条虚拟以太网链路，这样 Pod 即可正常发送和接收数据包。</p>
+<p>需要特别说明的是：netns 的生命周期绑定到&quot;至少有一个引用&quot;。意思是说，只要某个进程打开了 <code>/proc/&lt;pid&gt;/ns/net</code> 这个文件，就持有了一个引用，即使进程退出，netns 也不会消亡（直到文件被关闭）。kubelet 把这个文件路径传给 CNI 二进制文件，就是为了让 CNI 能用 <code>setns(fd, CLONE_NEWNET)</code> 系统调用进入那个 netns 配置接口。</p>
+<h2 id="22-哪个容器持有-netns">2.2 哪个容器持有 netns</h2>
+<p>根据 Kubernetes 网络模式的规定，一个 Pod 内的所有容器共享同一个 netns，该 netns 由 <strong>pause 容器</strong> 持有。实现流程如下：</p>
+<ol>
+<li>kubelet 启动 Pod 时，通过 runtimeService（基于 gRPC）调用 CRI 的 <code>RunPodSandbox</code> 方法。</li>
+<li>CRI 收到请求后，在 <code>RunPodSandbox</code> 中继续调用 <code>netns.NewNetNS</code> 创建一个空的 netns，然后将这个文件 bind mount 到 <code>/var/run/netns/cni-xxxxxx</code>（Docker 环境为 <code>/run/docker/netns/xxxxxx</code>）。此时尚未有任何进程属于这个 netns。（关于创建 netns 的详细步骤请移步补充内容。）</li>
+<li>CRI 进一步调用 <code>setupPodNetwork()</code>，在这里调用 CNI 二进制文件，在这个空 netns 里配置网络。CNI 执行完成后退出，netns 中已有了网络接口（eth0）、IP 和路由。</li>
+<li>最后，CRI 调用 <code>StartSandbox()</code>，真正创建并启动 pause 容器。pause 通过 OCI spec 加入已存在的 netns。后续业务容器启动时也通过同样的方式加入这个 netns。</li>
+</ol>
+<h2 id="23-如何给-pod-分配接口ip-等内容">2.3 如何给 Pod 分配接口/IP 等内容</h2>
+<p>CRI runtime 在启动 Pod sandbox 时，会通过 CNI library 调用本地 CNI 插件。它通常会扫描 <code>/etc/cni/net.d/</code> 下的 CNI 配置文件（例如 Calico 常见的 <code>10-calico.conflist</code>）。文件名前面的数字决定加载顺序，数字越小越靠前。</p>
+<p>配置文件中的 <code>type</code> 字段会对应到 <code>/opt/cni/bin/</code> 下的 CNI 插件二进制文件。CNI library 会在该目录中查找可执行文件，然后通过执行插件 binary，并借助环境变量和 stdin 封装一个 <code>cmdAdd</code> 的入参，调用 <code>cmdAdd</code> 方法来完成 Pod 网络接口、IP、路由等配置。</p>
+<p>以 bridge CNI 搭配 host-local IPAM 为例，配置文件示例如下：</p>
+<pre><code class="language-json">{
+    &quot;cniVersion&quot;: &quot;1.0.0&quot;,
+    &quot;name&quot;: &quot;mynet&quot;,
+    &quot;type&quot;: &quot;bridge&quot;,
+    &quot;bridge&quot;: &quot;mynet0&quot;,
+    &quot;isDefaultGateway&quot;: true,
+    &quot;forceAddress&quot;: false,
+    &quot;ipMasq&quot;: true,
+    &quot;hairpinMode&quot;: true,
+    &quot;ipam&quot;: {
+        &quot;type&quot;: &quot;host-local&quot;,
+        &quot;subnet&quot;: &quot;10.10.0.0/16&quot;
+    }
+}
+</code></pre>
+<h3 id="231-cni-插件收到什么">2.3.1 CNI 插件收到什么？</h3>
+<p><code>cmdAdd</code> 的入参 <code>*skel.CmdArgs</code> 结构如下：</p>
+<pre><code class="language-go">type CmdArgs struct {
+    ContainerID   string // 容器 ID
+    Netns         string // 要加入的那个 netns
+    IfName        string // 给容器添加的设备名字，例如 eth0
+    Args          string
+    Path          string
+    NetnsOverride string
+    StdinData     []byte // CNI 配置（JSON）
+}
+</code></pre>
+<p>插件要做的事只有一件：在 <code>Netns</code> 这个 netns 里，用 <code>IfName</code> 这个名字，创建一张有 IP 的网络接口。</p>
+<h3 id="232-创建设备并分配-ip">2.3.2 创建设备并分配 IP</h3>
+<p>该插件在上述流程中主要完成以下几个步骤：</p>
+<ol>
+<li>解析配置并在宿主机上建立 bridge 设备（或确保其存在）。</li>
+<li>打开 netns，创建 veth 对。</li>
+<li>如果有 IPAM，调用 IPAM 子插件分配 IP。</li>
+<li>进入容器 netns，配置 IP 和路由。</li>
+</ol>
+<p>首先，bridge 插件在 host netns 里用 <code>netlink.LinkAdd</code> 确保 bridge 存在（已存在则复用），并把 bridge 状态设为 UP。</p>
+<p>然后，CNI 会调用 <code>setupVeth</code> 方法，在容器网络命名空间和宿主机网络命名空间之间创建 veth 对：</p>
+<ul>
+<li>容器端：<code>args.IfName</code>（如 <code>eth0</code>）</li>
+<li>宿主机端：自动生成临时名字（如 <code>vethxxx</code>）</li>
+</ul>
+<p>接着将宿主机端的 veth 接入 bridge，并配置：</p>
+<ul>
+<li>Hairpin 模式（允许容器访问自己通过 DNAT 暴露的服务）</li>
+<li>端口隔离</li>
+<li>VLAN 标签（如果配置了 VLAN）</li>
+</ul>
+<p>如果 CNI 配置中包含 IPAM，则进入 L3 模式，通过 IPAM 分配 IP 并配置网络，具体步骤为：</p>
+<ul>
+<li>向 IPAM 请求 IP 地址，拿到 IP 和网关地址。</li>
+<li>补全网关地址并配置默认路由。</li>
+<li>进入容器 namespace 配置网卡，开启 ARP notify，然后将 IP、网关等写到容器内的网卡设备上。这一步类似于在容器内执行：
+<pre><code class="language-bash">ip addr add 10.244.1.5/24 dev eth0
+ip route add default via 10.244.1.1
+</code></pre>
+</li>
+<li>在宿主机上给 bridge 配置网关 IP，并开启 IP 转发。</li>
+<li>配置 IP Masquerade（SNAT）。</li>
+</ul>
+<p><img src="cni-progress.png" alt="CNI 流程图"></p>
+<h2 id="24-pod-单网卡的限制从哪儿来">2.4 Pod 单网卡的限制从哪儿来？</h2>
+<p>前面提到，CRI runtime 通过 go-cni 库调用 CNI 插件。go-cni 在初始化时会扫描 <code>/etc/cni/net.d/</code> 目录下的配置文件，并决定要加载几个网络。<strong>单网卡的限制就发生在这个加载逻辑中。</strong></p>
+<p>来看 containerd 的 go-cni 库中的关键函数 <code>loadFromConfDir</code>（简化版）：</p>
+<pre><code class="language-go">func loadFromConfDir(c *libcni, maxConfigs int) error {
+    // 1. 读取目录下所有 .conf / .conflist 文件
+    files, _ := cnilibrary.ConfFiles(c.pluginConfDir, []string{&quot;.conf&quot;, &quot;.conflist&quot;, &quot;.json&quot;})
+    sort.Strings(files)  // 按字典序排序
+
+    var networks []*Network
+    for _, confFile := range files {
+        // 解析配置文件为 NetworkConfigList
+        confList := parse(confFile)
+        networks = append(networks, &amp;Network{config: confList})
+        if len(networks) == maxConfigs {
+            break   // 达到上限就停止
+        }
+    }
+    c.networks = networks
+    return nil
+}
+</code></pre>
+<p>所有文件都会被遍历解析，但受 <code>maxConfigs</code> 控制，达到上限即 <code>break</code>。containerd 的默认配置是 <code>cni_max_conf_num = 1</code>，对应 <code>maxConfigs = 1</code>，因此实际上只加载字典序第一个文件对应的网络。</p>
+<p>由此可见，单网卡的限制根源在于 <strong><code>maxConfigs = 1</code></strong>，这意味着 <code>c.networks</code> 里默认只有一条记录，<code>Setup()</code> 只会调用这一个网络插件，自然只能产生一张接口。</p>
+<p>为了让 Pod 在自己的网络命名空间中看到多个网络接口，Multus 的方案是：<strong>把自己变成那个&quot;字典序第一&quot;的 CNI 配置</strong>，由 Multus 在内部调用多个 delegate CNI，从而绕过 go-cni 的最大配置数限制。</p>
+<h1 id="3-multus-详解">3. Multus 详解</h1>
+<p>Multus 的定位是一个 <strong>meta-plugin</strong>。它本身不创建任何网络设备，只负责按顺序调用多个 delegate CNI，并把结果都注入同一个 netns。对 CRI runtime 而言，它只调用了一个 CNI；对 Pod 而言，netns 里出现了来自不同 delegate 的多张接口。</p>
+<h2 id="31-部署形态">3.1 部署形态</h2>
+<ol>
+<li>
+<p><strong>Thin plugin（传统方式）</strong></p>
+<p>如下图所示，CRI runtime 每次 fork-exec <code>/opt/cni/bin/multus</code>，Multus 进程内部再 fork-exec 各个 delegate binary，执行完成后全部退出。这些进程的生命周期很短，每次 Pod 创建都要冷启动一个 in-cluster Kubernetes client，在 Pod 密集创建场景下会给 API Server 带来大量 list 请求。</p>
+<p><img src="multus_architecture.png" alt="图1. Thin Plugin模式"></p>
+</li>
+<li>
+<p><strong>Thick plugin / DaemonSet（生产常用）</strong></p>
+<p>这种模式下，每个 Kubernetes 节点上常驻一个 <code>multus-daemon</code> 进程（DaemonSet），它持有完整的 Kubernetes informer cache，监听 <code>/run/multus/multus.sock</code>。CRI runtime fork-exec <code>multus-shim</code>，shim 将 <code>CmdArgs</code> 序列化后发给 daemon，daemon 处理完成返回结果。informer cache 消除了重复 list 的问题，同时 daemon 支持热加载 NAD 变更，无需重启。</p>
+<p><img src="multus_thick_plugin_architecture.png" alt="图2. Thick Plugin模式"></p>
+</li>
+</ol>
+<h2 id="32-数据模型">3.2 数据模型</h2>
+<p>Multus 的数据模型由 <strong>CRD</strong>、<strong>Pod 注解</strong>以及<strong>委托配置</strong>三部分组成：</p>
+<ul>
+<li>
+<p><strong><a href="https://github.com/k8snetworkplumbingwg/network-attachment-definition-client">NetworkAttachmentDefinition（NAD）</a> CRD</strong>：用来描述一个附加网络的配置。</p>
+</li>
+<li>
+<p><strong>Pod 注解</strong>（根据用处分为两类）：</p>
+<ol>
+<li>选择附加网络：<code>k8s.v1.cni.cncf.io/networks</code> 注解可以让 Pod 声明需要使用的附加网络（可指定多个，以列表形式表示）。</li>
+<li>状态回写：添加附加网络成功后，Multus 会将实际结果写回到 Pod 的 <code>k8s.v1.cni.cncf.io/networks-status</code> 注解，内容是一个 JSON 数组，记录每个接口的详细信息。</li>
+</ol>
+</li>
+<li>
+<p><strong>委托配置</strong>：Multus 自身的主配置中，可以通过 <code>delegates</code> 字段指定默认网络插件（通常创建 eth0）。例如，将 flannel 作为主网络：</p>
+<pre><code class="language-json">{
+    &quot;cniVersion&quot;: &quot;0.3.1&quot;,
+    &quot;name&quot;: &quot;multus-cni&quot;,
+    &quot;type&quot;: &quot;multus&quot;,
+    &quot;delegates&quot;: [{
+      &quot;cniVersion&quot;: &quot;0.3.1&quot;,
+      &quot;type&quot;: &quot;flannel&quot;,
+      ...
+    }],
+    &quot;kubeconfig&quot;: &quot;/etc/cni/net.d/multus.d/multus.kubeconfig&quot;
+}
+</code></pre>
+</li>
+</ul>
+<h2 id="33-multus-的调用流程cmdadd-全链路">3.3 Multus 的调用流程：CmdAdd 全链路</h2>
+<p>前文已经讲述过 CNI 最终调用 <code>cmdAdd</code> 方法来配置 Pod 网络。当 Multus 被调用起来后也是一样的。根据 <a href="https://github.com/k8snetworkplumbingwg/multus-cni/blob/master/pkg/multus/multus.go#L743">Multus 源码</a>，可以将整个 <code>CmdAdd</code> 分为 8 个部分。</p>
+<h3 id="331-加载-multus-自身的配置与环境参数">3.3.1 加载 Multus 自身的配置与环境参数</h3>
+<p>Multus 从 stdin 拿到自己的主配置，其中 <code>delegates</code> 字段里藏着默认网络插件（例如 flannel 或 calico）的配置：</p>
+<pre><code class="language-go">n, err := types.LoadNetConf(args.StdinData)
+if err != nil {
+    return nil, cmdErr(nil, &quot;error loading netconf: %v&quot;, err)
+}
+</code></pre>
+<p>随后从环境变量提取 Kubernetes 参数（Pod 名字、命名空间等），这些会被塞进 <code>k8sArgs</code> 里，贯穿整个流程：</p>
+<pre><code class="language-go">k8sArgs, err := k8s.GetK8sArgs(args)
+</code></pre>
+<p>此时 <code>n.Delegates</code> 已经包含了默认网络配置（如果配置了的话），但附加网络还没着落。</p>
+<h3 id="332-获取-pod-对象">3.3.2 获取 Pod 对象</h3>
+<p>Multus 需要 Pod 对象来读取注解，于是调用 <code>GetPod</code>：它先用 informer 缓存，若失败就退回到 API 直接查询，并且在 Pod 未找到时对 ADD 操作采取容忍策略（返回空结果，避免卡住 kubelet）：</p>
+<pre><code class="language-go">pod, err := GetPod(kubeClient, k8sArgs, false)
+if err != nil {
+    if stderrors.Is(err, errPodNotFound) {
+        emptyResult := emptyCNIResult(args, n.CNIVersion)
+        return emptyResult, nil
+    }
+    return nil, err
+}
+</code></pre>
+<p>若 Pod 已被删除，Multus 直接返回一个带有 <code>0.0.0.0</code> 的空结果，让 kubelet 继续后续流程。</p>
+<h3 id="333-加载委托网络列表">3.3.3 加载委托网络列表</h3>
+<p><code>k8s.TryLoadPodDelegates</code> 是附加网络的&quot;真相时刻&quot;。它会解析 Pod 的 <code>k8s.v1.cni.cncf.io/networks</code> 注解，把每一项转换成内部的数据结构 <code>DelegateNetConf</code>，追加到 <code>n.Delegates</code> 里。如果注解引用了 CRD，就去缓存里把对应配置取出来并填充进去：</p>
+<pre><code class="language-go">_, kc, err := k8s.TryLoadPodDelegates(pod, n, kubeClient, resourceMap)
+if err != nil {
+    return nil, cmdErr(k8sArgs, &quot;error loading k8s delegates k8s args: %v&quot;, err)
+}
+</code></pre>
+<p>这里的 <code>kc</code> 代表 Kubernetes 客户端可用（有 kubeconfig），后续写网络状态时会用到。此时 <code>n.Delegates</code> 已经是一个完整有序的列表：<strong>默认网络 + 附加网络1 + 附加网络2 + &hellip;</strong>。这个顺序决定了接口命名。</p>
+<h3 id="334-缓存委托配置">3.3.4 缓存委托配置</h3>
+<p>为了防止 Pod 被快速删除时 <code>CmdDel</code> 拿不到委托信息，Multus 会把整个 <code>n.Delegates</code> 序列化并写入磁盘：</p>
+<pre><code class="language-go">if err := saveDelegates(args.ContainerID, n.CNIDir, n.Delegates); err != nil {
+    return nil, cmdErr(k8sArgs, &quot;error saving the delegates: %v&quot;, err)
+}
+</code></pre>
+<p>这样即便 Pod 被删、注解丢失，DEL 操作仍然可以从缓存中恢复委托配置，安全地清理网络接口。</p>
+<h3 id="335-循环委托逐个添加网络">3.3.5 循环委托，逐个添加网络</h3>
+<p>这是核心逻辑。每个委托都会获得一个网络接口名，然后调用 <code>DelegateAdd</code> 执行真正的 CNI ADD：</p>
+<pre><code class="language-go">for idx, delegate := range n.Delegates {
+    ifName := getIfname(delegate, args.IfName, idx)
+    rt, _ := types.CreateCNIRuntimeConf(args, k8sArgs, ifName, n.RuntimeConfig, delegate)
+    tmpResult, err = DelegateAdd(exec, kubeClient, pod, delegate, rt, n)
+    // ...
+}
+</code></pre>
+<p>其中，<code>getIfname</code> 的逻辑保证了接口名的确定性和可预测性：</p>
+<pre><code class="language-go">func getIfname(delegate *types.DelegateNetConf, argif string, idx int) string {
+    if delegate.IfnameRequest != &quot;&quot; {
+        return delegate.IfnameRequest
+    }
+    if delegate.MasterPlugin {
+        return argif  // 主网络使用 eth0
+    }
+    return fmt.Sprintf(&quot;net%d&quot;, idx) // 附加网络 net1, net2, ...
+}
+</code></pre>
+<h3 id="336-委托插件执行与路由策略">3.3.6 委托插件执行与路由策略</h3>
+<p><code>DelegateAdd</code> 最终调用 <code>confAdd</code> 或 <code>conflistAdd</code>，它们会通过标准 CNI 路径找到插件二进制文件并执行，然后把返回的结果（IP、路由、DNS）收集起来。</p>
+<p>除此之外，代码中还有一个非常实用的功能：<strong>按需删除或替换默认网关</strong>。</p>
+<p>如果某个附加网络标注了 <code>default-route</code> 选择器（通过注解配置），Multus 会在 ADD 之后手动删除该接口的默认路由，或者用它指定的网关替换：</p>
+<pre><code class="language-go">if deleteV4gateway || deleteV6gateway {
+    err = netutils.DeleteDefaultGW(args.Netns, ifName)
+    // ...
+}
+if adddefaultgateway {
+    err = netutils.SetDefaultGW(args.Netns, ifName, *delegate.GatewayRequest)
+    // ...
+}
+</code></pre>
+<p>这使得多网卡场景下的路由控制非常灵活。</p>
+<h3 id="337-汇总结果回写-pod-状态">3.3.7 汇总结果，回写 Pod 状态</h3>
+<p>所有委托成功后，Multus 会从每个结果中提取 IP 和接口信息，拼装成 <code>NetworkStatus</code> 切片，然后通过 API 写入 Pod 的 <code>k8s.v1.cni.cncf.io/networks-status</code> 注解：</p>
+<pre><code class="language-go">if kubeClient != nil &amp;&amp; kc != nil {
+    err = k8s.SetNetworkStatus(kubeClient, k8sArgs, netStatus, n)
+    // ...
+}
+</code></pre>
+<p>这样其他组件（例如监控、策略引擎）就能直接读到 Pod 的多网卡分配情况。最终，Multus 把主网络的结果（eth0 的 IP 和路由）作为整个 <code>CmdAdd</code> 的返回值交给 kubelet。</p>
+<h3 id="338-失败回滚">3.3.8 失败回滚</h3>
+<p>如果在添加第 N 个委托时失败，Multus 会立即停止后续委托，并调用 <code>delPlugins</code> 回滚已添加的前 N-1 个接口：</p>
+<pre><code class="language-go">tmpResult, err = DelegateAdd(...)
+if err != nil {
+    _ = delPlugins(exec, nil, args, k8sArgs, n.Delegates, idx, n.RuntimeConfig, n)
+    return nil, cmdPluginErr(k8sArgs, netName, &quot;error adding container to network %q: %v&quot;, netName, err)
+}
+</code></pre>
+<p><code>delPlugins</code> 会以倒序方式对每个已添加的委托调用 <code>DelegateDel</code>，保证网络命名空间里不留下任何残留。这种&quot;全成功或全失败&quot;的原子性，是生产环境中 Pod 创建可靠性的重要保障。</p>
+<h1 id="4-总结">4. 总结</h1>
+<p>总结一下，Kubernetes 默认只给 Pod 一张网卡，这在 AI 这类高性能场景下不够用。</p>
+<p>Multus 的思路很直接：它把自己伪装成默认 CNI，然后在内部偷偷调起多个网络插件，让 Pod 能同时挂上多张网卡。</p>
+<p>这篇文章讲了一些 CNI 的基础内容，分析了单网卡的根源，然后聊了 Multus 的工作方式和几种部署形态，也算是给网络这类文章开个头。</p>
+<h2 id="补充内容">补充内容</h2>
+<h3 id="1-netns-创建过程">1. netns 创建过程</h3>
+<p>containerd 在创建 netns 时会执行以下操作：</p>
+<ol>
+<li>创建用于挂载点的文件（非目录），随机命名如 <code>cni-xxxx</code>。</li>
+<li>通过 bind mount 实现持久化：<code>mount(/proc/pid/ns/net, 文件, MS_BIND)</code>，增加引用计数，使得进程退出后命名空间依然存活。</li>
+<li>创建新 netns：<code>unshare(CLONE_NEWNET)</code> 在线程级完成。</li>
+<li>必须调用 <code>LockOSThread</code>：因为 netns 是线程属性，锁定专用线程可避免污染其他调用方。</li>
+<li>使用完毕后切回原 netns。</li>
+</ol>
+
+</main>
+
+  <footer>
+  
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  if (typeof renderMathInElement === "function") {
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left: "$$", right: "$$", display: true},
+        {left: "$", right: "$", display: false},
+        {left: "\\(", right: "\\)", display: false}
+      ],
+      throwOnError: false
+    });
+  }
+});
+</script>
+
+
+  
+  <hr/>
+  © 2026 kgpp34 | <a href="https://github.com/kgpp34">GitHub</a> | <a href="https://www.linkedin.com/in/young-lh-756841233/">LinkedIn</a> | <a href="mailto:younglh.dlut@gmail.com">Email</a>
+  
+  </footer>
+  </body>
+</html>
+

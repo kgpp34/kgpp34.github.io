@@ -16,16 +16,14 @@ params:
   name: "kgpp34"
   bio: "云原生开发，偏爱能长期跑、能落地的系统；关注在离线业务发布、调度器、QoS 管理、可观测、LLM Infra 和 Agent Sandbox Infra。"
   github: "https://github.com/kgpp34"
-  projects: "https://github.com/kgpp34?tab=repositories"
   linkedin: "https://www.linkedin.com/in/young-lh-756841233/"
-  scholar: ""
-  email: ""
+  email: "younglh.dlut@gmail.com"
   disableHLJS: true
   disablePostNavigation: true
   math: true
   mainSections:
     - "posts"
-  footer: '&copy; 2026 kgpp34 | [GitHub](https://github.com/kgpp34) | [LinkedIn](https://www.linkedin.com/in/young-lh-756841233/) | [Projects](https://github.com/kgpp34?tab=repositories)'
+  footer: '&copy; 2026 kgpp34 | [GitHub](https://github.com/kgpp34) | [LinkedIn](https://www.linkedin.com/in/young-lh-756841233/) | [Email](mailto:younglh.dlut@gmail.com)'
 
 menus:
   main:
@@ -35,12 +33,6 @@ menus:
     - name: "About"
       url: "/about/"
       weight: 5
-    - name: "CV"
-      url: "/cv/"
-      weight: 6
-    - name: "Projects"
-      url: "/projects/"
-      weight: 7
     - name: "Posts"
       url: "/posts/"
       weight: 10

@@ -2,6 +2,7 @@
 date = '2026-06-01T15:43:52+08:00'
 draft = false
 title = 'Etcd Raft 01'
+tags = ['etcd', '存储']
 +++
 
 # Raft Leader Election 原理解析

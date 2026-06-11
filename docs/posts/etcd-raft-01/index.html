@@ -1,32 +1,382 @@
-<!doctype html><html lang=zh-CN><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Etcd Raft 01 | kgpp34 space</title><link rel=stylesheet href=/css/style.css><link rel=stylesheet href=/css/fonts.css><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/katex.min.css integrity=sha384-3UiQGuEI4TTMaFmGIZumfRPtfKQ3trwQE2JgosJxCnGmQpL/lJdjpcHkaaFwHlcI crossorigin=anonymous><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/katex.min.js integrity=sha384-G0zcxDFp5LWZtDuRMnBkk3EphCK1lhEf4UEyEM693ka574TZGwo4IWwS6QLzM/2t crossorigin=anonymous></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/contrib/auto-render.min.js integrity=sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05 crossorigin=anonymous></script></head><body><nav><ul class=menu><li><a href=/>Home</a></li><li><a href=/about/>About</a></li><li><a href=/cv/>CV</a></li><li><a href=/projects/>Projects</a></li><li><a href=/posts/>Posts</a></li><li><a href=/tags/>Tags</a></li><li><a href=/index.xml>Subscribe</a></li></ul><hr></nav><div class=article-meta><h1><span class=title>Etcd Raft 01</span></h1><h2 class=date>2026/06/01</h2></div><main><h1 id=raft-leader-election-原理解析>Raft Leader Election 原理解析</h1><p>这篇文章主要想系统梳理一下 Raft Leader Election（Leader 选举）的核心原理。</p><p>在分布式系统领域，<a href=https://raft.github.io/raft.pdf title="In Search of an Understandable Consensus Algorithm(Extended Version)">Raft</a> 是一个非常经典的共识算法。相比 Paxos，Raft 最大的特点是“可理解性（Understandability）”，它将复杂的共识问题拆分为了几个相对独立的子问题：</p><ul><li>Leader Election（Leader 选举）</li><li>Log Replication（日志复制）</li><li>Safety（安全性保证）</li><li>Membership Change（成员变更）</li></ul><p>其中，Leader Election 是整个 Raft 的起点，因为在 Raft 中，整个集群只能存在一个节点负责“做决定”，这个节点就是 Leader。</p><hr><h1 id=1-为什么需要-leader>1. 为什么需要 Leader</h1><p>一个分布式系统想要对外提供服务，往往需要由多个节点组成一个分布式集群。而一旦系统进入分布式环境后，就必须面对一个核心问题：如何保证多个节点之间的数据一致性。</p><p>例如：</p><pre><code class=language-text>Client A: set x = 1
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Etcd Raft 01 | kgpp34 space</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/katex.min.css"
+  integrity="sha384-3UiQGuEI4TTMaFmGIZumfRPtfKQ3trwQE2JgosJxCnGmQpL/lJdjpcHkaaFwHlcI"
+  crossorigin="anonymous"
+/>
+<script
+  defer
+  src="https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/katex.min.js"
+  integrity="sha384-G0zcxDFp5LWZtDuRMnBkk3EphCK1lhEf4UEyEM693ka574TZGwo4IWwS6QLzM/2t"
+  crossorigin="anonymous"
+></script>
+<script
+  defer
+  src="https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/contrib/auto-render.min.js"
+  integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05"
+  crossorigin="anonymous"
+></script>
+
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/about/">About</a></li>
+      
+      <li><a href="/posts/">Posts</a></li>
+      
+      <li><a href="/tags/">Tags</a></li>
+      
+      <li><a href="/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">Etcd Raft 01</span></h1>
+
+<h2 class="date">2026/06/01</h2>
+</div>
+
+<main>
+<h1 id="raft-leader-election-原理解析">Raft Leader Election 原理解析</h1>
+<p>这篇文章主要想系统梳理一下 Raft Leader Election（Leader 选举）的核心原理。</p>
+<p>在分布式系统领域，<a href="https://raft.github.io/raft.pdf" title="In Search of an Understandable Consensus Algorithm(Extended Version)">Raft</a> 是一个非常经典的共识算法。相比 Paxos，Raft 最大的特点是“可理解性（Understandability）”，它将复杂的共识问题拆分为了几个相对独立的子问题：</p>
+<ul>
+<li>Leader Election（Leader 选举）</li>
+<li>Log Replication（日志复制）</li>
+<li>Safety（安全性保证）</li>
+<li>Membership Change（成员变更）</li>
+</ul>
+<p>其中，Leader Election 是整个 Raft 的起点，因为在 Raft 中，整个集群只能存在一个节点负责“做决定”，这个节点就是 Leader。</p>
+<hr>
+<h1 id="1-为什么需要-leader">1. 为什么需要 Leader</h1>
+<p>一个分布式系统想要对外提供服务，往往需要由多个节点组成一个分布式集群。而一旦系统进入分布式环境后，就必须面对一个核心问题：如何保证多个节点之间的数据一致性。</p>
+<p>例如：</p>
+<pre><code class="language-text">Client A: set x = 1
 Client B: set x = 2
-</code></pre><p>如果多个节点都能同时处理写请求，那么网络延迟、消息乱序、节点宕机、网络分区等问题，都可能导致各节点最终状态出现分歧，这就是经典的分布式一致性（Consensus）问题。</p><p>Raft 对这个问题的解决方案是使用复制状态机（Replicated State Machine）模型。它并不直接同步“状态”，而是同步操作日志（Replicated Log）：</p><pre><code class=language-text>set x = 1
+</code></pre>
+<p>如果多个节点都能同时处理写请求，那么网络延迟、消息乱序、节点宕机、网络分区等问题，都可能导致各节点最终状态出现分歧，这就是经典的分布式一致性（Consensus）问题。</p>
+<p>Raft 对这个问题的解决方案是使用复制状态机（Replicated State Machine）模型。它并不直接同步“状态”，而是同步操作日志（Replicated Log）：</p>
+<pre><code class="language-text">set x = 1
 set y = 2
 delete z
-</code></pre><p>只要所有节点：</p><ul><li>拥有相同日志</li><li>按相同顺序执行日志</li></ul><p>那么最终状态一定一致。</p><p>但这里有一个关键问题：谁来决定日志顺序？</p><p>如果多个节点都能同时向日志中写入数据，就会产生冲突。因此，Raft 做了一个非常重要的设计：整个集群只允许一个节点负责管理日志，这个节点就是 Leader。</p><p>所有客户端写请求都必须先发送给 Leader，再由 Leader 统一协调日志复制。Follower 不允许主动写日志，只负责复制 Leader 的日志。这样做的好处是：</p><ul><li>日志顺序唯一</li><li>不存在并发写冲突</li><li>集群行为更容易推导</li><li>一致性模型更清晰</li></ul><hr><h1 id=2-leader-的核心职责>2. Leader 的核心职责</h1><p>Leader 本质上是整个集群的日志协调者，其核心职责包括：</p><ul><li>接收客户端请求</li><li>将日志追加到本地 WAL（Write Ahead Log）</li><li>向 Follower 复制日志（AppendEntries RPC）</li><li>推进 Commit Index</li><li>将日志应用到状态机</li><li>定期发送 Heartbeat</li></ul><p>其中，Heartbeat 本质上也是一种特殊的 AppendEntries RPC，只不过：</p><pre><code class=language-go>entries = []
-</code></pre><p>即不携带实际日志。</p><p>Heartbeat 的作用本质上是维持 Leadership。Follower 只要持续收到 Heartbeat，就不会触发 Election Timeout，也不会发起新的选举。</p><hr><h1 id=3-为什么需要-leader-election>3. 为什么需要 Leader Election</h1><p>Leader 是整个集群唯一的决策中心，因此其存活状态直接决定系统是否还能继续处理写请求。</p><p>一旦 Leader 崩溃：</p><ul><li>Follower 无法继续提交新日志</li><li>集群无法处理新的写请求</li><li>系统进入不可写状态</li></ul><p>因此，Raft 必须能够在 Leader 故障后快速重新选出新的 Leader，这也是 Leader Election 存在的根本原因。</p><hr><h1 id=4-节点角色与核心概念>4. 节点角色与核心概念</h1><p>Raft 中共有三种角色：</p><table><thead><tr><th>角色</th><th>说明</th></tr></thead><tbody><tr><td>Follower</td><td>被动状态，只响应 RPC</td></tr><tr><td>Candidate</td><td>发起选举时的过渡状态</td></tr><tr><td>Leader</td><td>负责日志复制与集群协调</td></tr></tbody></table><p>节点状态转换如下图所示：</p><p><img src=https://files.mdnice.com/user/203138/67ab8994-db6b-4cc5-921b-da91fb369e44.png alt=Raft角色状态转换></p><p>除了角色之外，Raft 还引入了一个非常核心的概念：Term（任期）。</p><p>Term 本质上是一个逻辑时钟（Logical Clock），Raft 使用 Term 来区分不同轮次的 Leader Election，并判断消息是否过期。</p><p>其核心规则如下：</p><ul><li>Term 单调递增</li><li>每次发起新选举时 term++</li><li>每个节点都会持久化 currentTerm</li><li>所有 RPC 都会携带 term</li></ul><p>例如：</p><pre><code class=language-go>RequestVote(term=5)
+</code></pre>
+<p>只要所有节点：</p>
+<ul>
+<li>拥有相同日志</li>
+<li>按相同顺序执行日志</li>
+</ul>
+<p>那么最终状态一定一致。</p>
+<p>但这里有一个关键问题：谁来决定日志顺序？</p>
+<p>如果多个节点都能同时向日志中写入数据，就会产生冲突。因此，Raft 做了一个非常重要的设计：整个集群只允许一个节点负责管理日志，这个节点就是 Leader。</p>
+<p>所有客户端写请求都必须先发送给 Leader，再由 Leader 统一协调日志复制。Follower 不允许主动写日志，只负责复制 Leader 的日志。这样做的好处是：</p>
+<ul>
+<li>日志顺序唯一</li>
+<li>不存在并发写冲突</li>
+<li>集群行为更容易推导</li>
+<li>一致性模型更清晰</li>
+</ul>
+<hr>
+<h1 id="2-leader-的核心职责">2. Leader 的核心职责</h1>
+<p>Leader 本质上是整个集群的日志协调者，其核心职责包括：</p>
+<ul>
+<li>接收客户端请求</li>
+<li>将日志追加到本地 WAL（Write Ahead Log）</li>
+<li>向 Follower 复制日志（AppendEntries RPC）</li>
+<li>推进 Commit Index</li>
+<li>将日志应用到状态机</li>
+<li>定期发送 Heartbeat</li>
+</ul>
+<p>其中，Heartbeat 本质上也是一种特殊的 AppendEntries RPC，只不过：</p>
+<pre><code class="language-go">entries = []
+</code></pre>
+<p>即不携带实际日志。</p>
+<p>Heartbeat 的作用本质上是维持 Leadership。Follower 只要持续收到 Heartbeat，就不会触发 Election Timeout，也不会发起新的选举。</p>
+<hr>
+<h1 id="3-为什么需要-leader-election">3. 为什么需要 Leader Election</h1>
+<p>Leader 是整个集群唯一的决策中心，因此其存活状态直接决定系统是否还能继续处理写请求。</p>
+<p>一旦 Leader 崩溃：</p>
+<ul>
+<li>Follower 无法继续提交新日志</li>
+<li>集群无法处理新的写请求</li>
+<li>系统进入不可写状态</li>
+</ul>
+<p>因此，Raft 必须能够在 Leader 故障后快速重新选出新的 Leader，这也是 Leader Election 存在的根本原因。</p>
+<hr>
+<h1 id="4-节点角色与核心概念">4. 节点角色与核心概念</h1>
+<p>Raft 中共有三种角色：</p>
+<table>
+	<thead>
+			<tr>
+					<th>角色</th>
+					<th>说明</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>Follower</td>
+					<td>被动状态，只响应 RPC</td>
+			</tr>
+			<tr>
+					<td>Candidate</td>
+					<td>发起选举时的过渡状态</td>
+			</tr>
+			<tr>
+					<td>Leader</td>
+					<td>负责日志复制与集群协调</td>
+			</tr>
+	</tbody>
+</table>
+<p>节点状态转换如下图所示：</p>
+<p><img src="https://files.mdnice.com/user/203138/67ab8994-db6b-4cc5-921b-da91fb369e44.png" alt="Raft角色状态转换"></p>
+<p>除了角色之外，Raft 还引入了一个非常核心的概念：Term（任期）。</p>
+<p>Term 本质上是一个逻辑时钟（Logical Clock），Raft 使用 Term 来区分不同轮次的 Leader Election，并判断消息是否过期。</p>
+<p>其核心规则如下：</p>
+<ul>
+<li>Term 单调递增</li>
+<li>每次发起新选举时 term++</li>
+<li>每个节点都会持久化 currentTerm</li>
+<li>所有 RPC 都会携带 term</li>
+</ul>
+<p>例如：</p>
+<pre><code class="language-go">RequestVote(term=5)
 AppendEntries(term=5)
-</code></pre><p>如果某个节点收到：</p><pre><code class=language-go>term &gt; currentTerm
-</code></pre><p>那么它会立刻：</p><ul><li>更新 currentTerm</li><li>退回 Follower 状态</li></ul><p>反之，如果收到：</p><pre><code class=language-go>term &lt; currentTerm
-</code></pre><p>则直接拒绝该 RPC。</p><hr><h1 id=5-raft-中的两种核心-rpc>5. Raft 中的两种核心 RPC</h1><p>Raft Leader Election 主要依赖两种 RPC：</p><table><thead><tr><th>RPC</th><th>发起方</th><th>作用</th></tr></thead><tbody><tr><td>RequestVote</td><td>Candidate</td><td>请求投票</td></tr><tr><td>AppendEntries</td><td>Leader</td><td>日志复制与 Heartbeat</td></tr></tbody></table><p>其中：</p><ul><li>RequestVote 用于发起选举</li><li>AppendEntries 用于复制日志以及维持 Leadership</li></ul><hr><h1 id=6-leader-election-流程>6. Leader Election 流程</h1><h3 id=61-election-timeout>6.1 Election Timeout</h3><p>每个 Follower 都会维护一个 Election Timeout。只要 Follower 能持续收到 Leader 的 Heartbeat：</p><pre><code class=language-go>AppendEntries(entries=[])
-</code></pre><p>它就会不断重置 Election Timeout。</p><p>但如果长时间收不到 Heartbeat，Follower 就会认为当前 Leader 已失联，并进入 Candidate 状态：</p><pre><code class=language-text>Follower -&gt; Candidate
-</code></pre><p>随后发起新一轮选举。</p><p>Raft 论文推荐的 Election Timeout 范围为：</p><pre><code class=language-text>150ms ~ 300ms
-</code></pre><p>并要求满足：</p><pre><code>broadcastTime &lt; electionTimeout &lt;&lt; MTBF
-</code></pre><p>即：</p><ul><li>Election Timeout 必须远大于网络广播时间</li><li>同时远小于节点平均故障时间（MTBF）</li></ul><p>否则：</p><ul><li>Timeout 过小容易误触发选举</li><li>Timeout 过大则会导致 Leader 故障恢复过慢</li></ul><hr><h3 id=62-发起选举>6.2 发起选举</h3><p>当 Follower 超时后，会执行以下操作：</p><pre><code class=language-go>currentTerm++
+</code></pre>
+<p>如果某个节点收到：</p>
+<pre><code class="language-go">term &gt; currentTerm
+</code></pre>
+<p>那么它会立刻：</p>
+<ul>
+<li>更新 currentTerm</li>
+<li>退回 Follower 状态</li>
+</ul>
+<p>反之，如果收到：</p>
+<pre><code class="language-go">term &lt; currentTerm
+</code></pre>
+<p>则直接拒绝该 RPC。</p>
+<hr>
+<h1 id="5-raft-中的两种核心-rpc">5. Raft 中的两种核心 RPC</h1>
+<p>Raft Leader Election 主要依赖两种 RPC：</p>
+<table>
+	<thead>
+			<tr>
+					<th>RPC</th>
+					<th>发起方</th>
+					<th>作用</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>RequestVote</td>
+					<td>Candidate</td>
+					<td>请求投票</td>
+			</tr>
+			<tr>
+					<td>AppendEntries</td>
+					<td>Leader</td>
+					<td>日志复制与 Heartbeat</td>
+			</tr>
+	</tbody>
+</table>
+<p>其中：</p>
+<ul>
+<li>RequestVote 用于发起选举</li>
+<li>AppendEntries 用于复制日志以及维持 Leadership</li>
+</ul>
+<hr>
+<h1 id="6-leader-election-流程">6. Leader Election 流程</h1>
+<h3 id="61-election-timeout">6.1 Election Timeout</h3>
+<p>每个 Follower 都会维护一个 Election Timeout。只要 Follower 能持续收到 Leader 的 Heartbeat：</p>
+<pre><code class="language-go">AppendEntries(entries=[])
+</code></pre>
+<p>它就会不断重置 Election Timeout。</p>
+<p>但如果长时间收不到 Heartbeat，Follower 就会认为当前 Leader 已失联，并进入 Candidate 状态：</p>
+<pre><code class="language-text">Follower -&gt; Candidate
+</code></pre>
+<p>随后发起新一轮选举。</p>
+<p>Raft 论文推荐的 Election Timeout 范围为：</p>
+<pre><code class="language-text">150ms ~ 300ms
+</code></pre>
+<p>并要求满足：</p>
+<pre><code>broadcastTime &lt; electionTimeout &lt;&lt; MTBF
+</code></pre>
+<p>即：</p>
+<ul>
+<li>Election Timeout 必须远大于网络广播时间</li>
+<li>同时远小于节点平均故障时间（MTBF）</li>
+</ul>
+<p>否则：</p>
+<ul>
+<li>Timeout 过小容易误触发选举</li>
+<li>Timeout 过大则会导致 Leader 故障恢复过慢</li>
+</ul>
+<hr>
+<h3 id="62-发起选举">6.2 发起选举</h3>
+<p>当 Follower 超时后，会执行以下操作：</p>
+<pre><code class="language-go">currentTerm++
 state = Candidate
 voteFor = self
 resetElectionTimeout()
-</code></pre><p>随后，Candidate 会向其他所有节点发送：</p><pre><code class=language-go>RequestVote RPC
-</code></pre><p>请求其他节点给自己投票。</p><hr><h3 id=63-投票规则>6.3 投票规则</h3><p>收到 RequestVote 的节点（Voter）会根据以下规则决定是否投票。</p><p>首先，如果：</p><pre><code class=language-go>candidate.term &lt; currentTerm
-</code></pre><p>说明 Candidate 已经过期，直接拒绝。</p><p>否则，还需要同时满足以下条件：</p><h4 id=条件一当前-term-尚未投票>条件一：当前 Term 尚未投票</h4><p>即：</p><pre><code class=language-go>votedFor == nil
-</code></pre><p>或者：</p><pre><code class=language-go>votedFor == candidate
-</code></pre><p>Raft 要求每个节点在同一个 Term 内最多只能投一票，这是 Election Safety 的基础。</p><h4 id=条件二candidate-的日志至少和自己一样新>条件二：Candidate 的日志至少和自己一样新</h4><p>Raft 并不是“谁先发起选举谁就能成为 Leader”。</p><p>Follower 只会投票给日志至少不落后于自己的 Candidate，因为新 Leader 必须拥有所有已提交日志。这也是 Raft Log Safety 的关键基础。</p><hr><h1 id=7-leader-election-的三种结果>7. Leader Election 的三种结果</h1><h3 id=71-赢得选举>7.1 赢得选举</h3><p>如果 Candidate 获得多数派（Majority）节点支持：</p><pre><code>⌊N/2⌋ + 1
-</code></pre><p>那么：</p><pre><code class=language-text>Candidate -&gt; Leader
-</code></pre><p>随后，Leader 会立刻向所有节点广播 Heartbeat：</p><pre><code class=language-go>AppendEntries(entries=[])
-</code></pre><p>以阻止其他节点继续发起选举。</p><hr><h3 id=72-发现合法-leader>7.2 发现合法 Leader</h3><p>如果 Candidate 在等待投票期间收到了某个 Leader 发来的 AppendEntries，并且：</p><pre><code class=language-go>leader.term &gt;= currentTerm
-</code></pre><p>则说明当前集群已经存在合法 Leader。</p><p>于是：</p><pre><code class=language-text>Candidate -&gt; Follower
-</code></pre><p>停止当前选举。</p><hr><h3 id=73-split-vote选票分裂>7.3 Split Vote（选票分裂）</h3><p>Split Vote 是 Raft Leader Election 中一个非常经典的问题。</p><p>假设多个节点几乎同时超时：</p><pre><code class=language-text>Node A timeout
+</code></pre>
+<p>随后，Candidate 会向其他所有节点发送：</p>
+<pre><code class="language-go">RequestVote RPC
+</code></pre>
+<p>请求其他节点给自己投票。</p>
+<hr>
+<h3 id="63-投票规则">6.3 投票规则</h3>
+<p>收到 RequestVote 的节点（Voter）会根据以下规则决定是否投票。</p>
+<p>首先，如果：</p>
+<pre><code class="language-go">candidate.term &lt; currentTerm
+</code></pre>
+<p>说明 Candidate 已经过期，直接拒绝。</p>
+<p>否则，还需要同时满足以下条件：</p>
+<h4 id="条件一当前-term-尚未投票">条件一：当前 Term 尚未投票</h4>
+<p>即：</p>
+<pre><code class="language-go">votedFor == nil
+</code></pre>
+<p>或者：</p>
+<pre><code class="language-go">votedFor == candidate
+</code></pre>
+<p>Raft 要求每个节点在同一个 Term 内最多只能投一票，这是 Election Safety 的基础。</p>
+<h4 id="条件二candidate-的日志至少和自己一样新">条件二：Candidate 的日志至少和自己一样新</h4>
+<p>Raft 并不是“谁先发起选举谁就能成为 Leader”。</p>
+<p>Follower 只会投票给日志至少不落后于自己的 Candidate，因为新 Leader 必须拥有所有已提交日志。这也是 Raft Log Safety 的关键基础。</p>
+<hr>
+<h1 id="7-leader-election-的三种结果">7. Leader Election 的三种结果</h1>
+<h3 id="71-赢得选举">7.1 赢得选举</h3>
+<p>如果 Candidate 获得多数派（Majority）节点支持：</p>
+<pre><code>⌊N/2⌋ + 1
+</code></pre>
+<p>那么：</p>
+<pre><code class="language-text">Candidate -&gt; Leader
+</code></pre>
+<p>随后，Leader 会立刻向所有节点广播 Heartbeat：</p>
+<pre><code class="language-go">AppendEntries(entries=[])
+</code></pre>
+<p>以阻止其他节点继续发起选举。</p>
+<hr>
+<h3 id="72-发现合法-leader">7.2 发现合法 Leader</h3>
+<p>如果 Candidate 在等待投票期间收到了某个 Leader 发来的 AppendEntries，并且：</p>
+<pre><code class="language-go">leader.term &gt;= currentTerm
+</code></pre>
+<p>则说明当前集群已经存在合法 Leader。</p>
+<p>于是：</p>
+<pre><code class="language-text">Candidate -&gt; Follower
+</code></pre>
+<p>停止当前选举。</p>
+<hr>
+<h3 id="73-split-vote选票分裂">7.3 Split Vote（选票分裂）</h3>
+<p>Split Vote 是 Raft Leader Election 中一个非常经典的问题。</p>
+<p>假设多个节点几乎同时超时：</p>
+<pre><code class="language-text">Node A timeout
 Node B timeout
-</code></pre><p>那么 A 和 B 都会同时进入 Candidate 状态：</p><ul><li>A 给自己投票</li><li>B 给自己投票</li><li>其他节点投票被瓜分</li></ul><p>最终：</p><pre><code class=language-text>没有任何 Candidate 获得 Majority
-</code></pre><p>整个集群进入 Split Vote 状态。</p><hr><h1 id=8-raft-如何解决-split-vote>8. Raft 如何解决 Split Vote</h1><p>Raft 的解决方案非常经典：Randomized Election Timeout（随机化选举超时）。</p><p>即每个节点的 Election Timeout 并不固定，而是在一个区间内随机选择：</p><pre><code class=language-text>150ms ~ 300ms
-</code></pre><p>这样大多数情况下，总会有一个节点更早超时，从而：</p><ul><li>更早发起选举</li><li>更早获得多数票</li><li>更快成为 Leader</li></ul><p>因此，Split Vote 的概率会显著下降。</p><hr><h1 id=9-leader-election-的安全性保证>9. Leader Election 的安全性保证</h1><p>Raft Leader Election 的安全性主要体现在两个方面。</p><h3 id=election-safety>Election Safety</h3><p>即每个 Term 最多只能存在一个 Leader。</p><p>这是通过：</p><ul><li>Majority 投票</li><li>每个节点每个 Term 最多投一票</li></ul><p>共同保证的。</p><p>因为两个不同 Candidate 不可能同时获得多数票。</p><h3 id=leader-completeness>Leader Completeness</h3><p>即新 Leader 必然拥有所有已提交日志。</p><p>这是通过“日志新旧检查”实现的。由于：</p><ul><li>已提交日志一定存在于多数派节点</li><li>Leader Election 同样需要多数派支持</li></ul><p>因此两个 Majority 必然存在交集，而这个交集节点只会投票给日志不落后的 Candidate，因此新 Leader 不会丢失已提交日志。</p><hr><h1 id=10-总结>10. 总结</h1><p>Raft Leader Election 的核心思想并不复杂，其本质是通过 Majority 投票机制，在任意时刻只允许一个节点成为 Leader。</p><p>整个过程主要依赖：</p><ul><li>Election Timeout</li><li>RequestVote RPC</li><li>Term</li><li>Majority</li></ul><p>共同完成。</p><p>不过需要注意的是，论文中的 Raft Leader Election 更多是一个“理想化模型”。在真实工程环境中，网络分区、GC Pause、时钟漂移、磁盘 IO 抖动以及 Slow Node 等问题，都会对选举过程产生影响。</p><p>因此，今天工业界中的 etcd、TiKV、Consul 等系统，实际上都对原始 Raft 做了大量工程增强。</p><p>下一篇文章中，我们将进一步分析：</p><blockquote><p>为什么一个已经失联很久的节点，重新加入集群后，反而可能触发整个 Raft 集群重新选举。</p></blockquote><p>以及：</p><blockquote><p>PreVote 为什么会成为工业级 Raft 的标配。</p></blockquote></main><footer><script>document.addEventListener("DOMContentLoaded",function(){typeof renderMathInElement=="function"&&renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1},{left:"\\(",right:"\\)",display:!1}],throwOnError:!1})})</script><hr>© 2026 kgpp34 | <a href=https://github.com/kgpp34>GitHub</a> | <a href=https://www.linkedin.com/in/young-lh-756841233/>LinkedIn</a> | <a href="https://github.com/kgpp34?tab=repositories">Projects</a></footer></body></html>
+</code></pre>
+<p>那么 A 和 B 都会同时进入 Candidate 状态：</p>
+<ul>
+<li>A 给自己投票</li>
+<li>B 给自己投票</li>
+<li>其他节点投票被瓜分</li>
+</ul>
+<p>最终：</p>
+<pre><code class="language-text">没有任何 Candidate 获得 Majority
+</code></pre>
+<p>整个集群进入 Split Vote 状态。</p>
+<hr>
+<h1 id="8-raft-如何解决-split-vote">8. Raft 如何解决 Split Vote</h1>
+<p>Raft 的解决方案非常经典：Randomized Election Timeout（随机化选举超时）。</p>
+<p>即每个节点的 Election Timeout 并不固定，而是在一个区间内随机选择：</p>
+<pre><code class="language-text">150ms ~ 300ms
+</code></pre>
+<p>这样大多数情况下，总会有一个节点更早超时，从而：</p>
+<ul>
+<li>更早发起选举</li>
+<li>更早获得多数票</li>
+<li>更快成为 Leader</li>
+</ul>
+<p>因此，Split Vote 的概率会显著下降。</p>
+<hr>
+<h1 id="9-leader-election-的安全性保证">9. Leader Election 的安全性保证</h1>
+<p>Raft Leader Election 的安全性主要体现在两个方面。</p>
+<h3 id="election-safety">Election Safety</h3>
+<p>即每个 Term 最多只能存在一个 Leader。</p>
+<p>这是通过：</p>
+<ul>
+<li>Majority 投票</li>
+<li>每个节点每个 Term 最多投一票</li>
+</ul>
+<p>共同保证的。</p>
+<p>因为两个不同 Candidate 不可能同时获得多数票。</p>
+<h3 id="leader-completeness">Leader Completeness</h3>
+<p>即新 Leader 必然拥有所有已提交日志。</p>
+<p>这是通过“日志新旧检查”实现的。由于：</p>
+<ul>
+<li>已提交日志一定存在于多数派节点</li>
+<li>Leader Election 同样需要多数派支持</li>
+</ul>
+<p>因此两个 Majority 必然存在交集，而这个交集节点只会投票给日志不落后的 Candidate，因此新 Leader 不会丢失已提交日志。</p>
+<hr>
+<h1 id="10-总结">10. 总结</h1>
+<p>Raft Leader Election 的核心思想并不复杂，其本质是通过 Majority 投票机制，在任意时刻只允许一个节点成为 Leader。</p>
+<p>整个过程主要依赖：</p>
+<ul>
+<li>Election Timeout</li>
+<li>RequestVote RPC</li>
+<li>Term</li>
+<li>Majority</li>
+</ul>
+<p>共同完成。</p>
+<p>不过需要注意的是，论文中的 Raft Leader Election 更多是一个“理想化模型”。在真实工程环境中，网络分区、GC Pause、时钟漂移、磁盘 IO 抖动以及 Slow Node 等问题，都会对选举过程产生影响。</p>
+<p>因此，今天工业界中的 etcd、TiKV、Consul 等系统，实际上都对原始 Raft 做了大量工程增强。</p>
+<p>下一篇文章中，我们将进一步分析：</p>
+<blockquote>
+<p>为什么一个已经失联很久的节点，重新加入集群后，反而可能触发整个 Raft 集群重新选举。</p>
+</blockquote>
+<p>以及：</p>
+<blockquote>
+<p>PreVote 为什么会成为工业级 Raft 的标配。</p>
+</blockquote>
+
+</main>
+
+  <footer>
+  
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  if (typeof renderMathInElement === "function") {
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left: "$$", right: "$$", display: true},
+        {left: "$", right: "$", display: false},
+        {left: "\\(", right: "\\)", display: false}
+      ],
+      throwOnError: false
+    });
+  }
+});
+</script>
+
+
+  
+  <hr/>
+  © 2026 kgpp34 | <a href="https://github.com/kgpp34">GitHub</a> | <a href="https://www.linkedin.com/in/young-lh-756841233/">LinkedIn</a> | <a href="mailto:younglh.dlut@gmail.com">Email</a>
+  
+  </footer>
+  </body>
+</html>
+

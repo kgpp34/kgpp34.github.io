@@ -1,1 +1,52 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Tags on kgpp34 space</title><link>https://kgpp34.github.io/tags/</link><description>Recent content in Tags on kgpp34 space</description><generator>Hugo</generator><language>zh-CN</language><atom:link href="https://kgpp34.github.io/tags/index.xml" rel="self" type="application/rss+xml"/></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+	<channel>
+		<title>Tags on kgpp34 space</title>
+		<link>http://localhost:1313/tags/</link>
+		<description>Recent content in Tags on kgpp34 space</description>
+		<generator>Hugo</generator>
+		<language>zh-CN</language>
+		
+		
+		
+		
+			<lastBuildDate>Thu, 11 Jun 2026 16:50:00 +0800</lastBuildDate>
+		
+			<atom:link href="http://localhost:1313/tags/index.xml" rel="self" type="application/rss+xml" />
+			<item>
+				<title>K8s</title>
+				<link>http://localhost:1313/tags/k8s/</link>
+				<pubDate>Thu, 11 Jun 2026 16:50:00 +0800</pubDate>
+				<guid>http://localhost:1313/tags/k8s/</guid>
+				<description></description>
+			</item>
+			<item>
+				<title>LLM Infra</title>
+				<link>http://localhost:1313/tags/llm-infra/</link>
+				<pubDate>Thu, 11 Jun 2026 16:50:00 +0800</pubDate>
+				<guid>http://localhost:1313/tags/llm-infra/</guid>
+				<description></description>
+			</item>
+			<item>
+				<title>网络</title>
+				<link>http://localhost:1313/tags/%E7%BD%91%E7%BB%9C/</link>
+				<pubDate>Thu, 11 Jun 2026 16:50:00 +0800</pubDate>
+				<guid>http://localhost:1313/tags/%E7%BD%91%E7%BB%9C/</guid>
+				<description></description>
+			</item>
+			<item>
+				<title>Etcd</title>
+				<link>http://localhost:1313/tags/etcd/</link>
+				<pubDate>Mon, 01 Jun 2026 15:43:52 +0800</pubDate>
+				<guid>http://localhost:1313/tags/etcd/</guid>
+				<description></description>
+			</item>
+			<item>
+				<title>存储</title>
+				<link>http://localhost:1313/tags/%E5%AD%98%E5%82%A8/</link>
+				<pubDate>Mon, 01 Jun 2026 15:43:52 +0800</pubDate>
+				<guid>http://localhost:1313/tags/%E5%AD%98%E5%82%A8/</guid>
+				<description></description>
+			</item>
+	</channel>
+</rss>

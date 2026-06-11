@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 	<channel>
-		<title>Posts on kgpp34 space</title>
-		<link>http://localhost:1313/posts/</link>
-		<description>Recent content in Posts on kgpp34 space</description>
+		<title>LLM Infra on kgpp34 space</title>
+		<link>http://localhost:1313/tags/llm-infra/</link>
+		<description>Recent content in LLM Infra on kgpp34 space</description>
 		<generator>Hugo</generator>
 		<language>zh-CN</language>
 		
@@ -12,20 +12,13 @@
 		
 			<lastBuildDate>Thu, 11 Jun 2026 16:50:00 +0800</lastBuildDate>
 		
-			<atom:link href="http://localhost:1313/posts/index.xml" rel="self" type="application/rss+xml" />
+			<atom:link href="http://localhost:1313/tags/llm-infra/index.xml" rel="self" type="application/rss+xml" />
 			<item>
 				<title>K8s Multiple CNI Solution: Multus</title>
 				<link>http://localhost:1313/posts/k8s-multiple-cni-solution-multus/</link>
 				<pubDate>Thu, 11 Jun 2026 16:50:00 +0800</pubDate>
 				<guid>http://localhost:1313/posts/k8s-multiple-cni-solution-multus/</guid>
 				<description>&lt;h1 id=&#34;1-为什么需要多网卡&#34;&gt;1. 为什么需要多网卡&lt;/h1&gt;&#xA;&lt;p&gt;传统微服务场景下，东西向网络流量通常不需要特别大的带宽，采用常规网卡即可满足需求。但在 AI 场景或其它高性能场景下，传统网卡就显得不够用了。因此，一种常见的做法是将流量分离：传统业务流量和管理流量依然走传统网卡，而其它流量走特定的网卡。然而，Kubernetes 默认的网络模型仅会给 Pod 分配一个网卡。要提供多网卡，必须有一种机制将不同的网卡设备也挂载到 Pod 的网络命名空间（netns）中。实现这种效果需要使用多 CNI，目前工业界普遍采用的成熟开源方案是 &lt;strong&gt;Multus&lt;/strong&gt;。&lt;/p&gt;&#xA;&lt;h1 id=&#34;2-cni-基础原理&#34;&gt;2. CNI 基础原理&lt;/h1&gt;&#xA;&lt;p&gt;要想了解 Multus CNI 是如何在现有 CNI 机制上进行扩展的，需要先简单了解相关的背景知识和 CNI 的基础内容。&lt;/p&gt;&#xA;&lt;h2 id=&#34;21-netns-网络命名空间&#34;&gt;2.1 netns 网络命名空间&lt;/h2&gt;&#xA;&lt;p&gt;Linux 会把网络虚拟化成独立的 netns。每个 netns 拥有独立的：&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;网络接口列表&lt;/li&gt;&#xA;&lt;li&gt;路由表&lt;/li&gt;&#xA;&lt;li&gt;iptables 规则链&lt;/li&gt;&#xA;&lt;li&gt;socket 表&lt;/li&gt;&#xA;&lt;li&gt;/proc/sys/net/ 参数&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;p&gt;网络接口/设备可以在 netns 之间移动（通过 &lt;code&gt;ip link set eth0 netns &amp;lt;pid&amp;gt;&lt;/code&gt;），但移动后原 netns 就看不到它了。veth pair 是例外——veth 是成对创建的，一端在 host netns，一端在 Pod netns，两端之间形成一条虚拟以太网链路，这样 Pod 即可正常发送和接收数据包。&lt;/p&gt;&#xA;&lt;p&gt;需要特别说明的是：netns 的生命周期绑定到&amp;quot;至少有一个引用&amp;quot;。意思是说，只要某个进程打开了 &lt;code&gt;/proc/&amp;lt;pid&amp;gt;/ns/net&lt;/code&gt; 这个文件，就持有了一个引用，即使进程退出，netns 也不会消亡（直到文件被关闭）。kubelet 把这个文件路径传给 CNI 二进制文件，就是为了让 CNI 能用 &lt;code&gt;setns(fd, CLONE_NEWNET)&lt;/code&gt; 系统调用进入那个 netns 配置接口。&lt;/p&gt;</description>
-			</item>
-			<item>
-				<title>Etcd Raft 01</title>
-				<link>http://localhost:1313/posts/etcd-raft-01/</link>
-				<pubDate>Mon, 01 Jun 2026 15:43:52 +0800</pubDate>
-				<guid>http://localhost:1313/posts/etcd-raft-01/</guid>
-				<description>&lt;h1 id=&#34;raft-leader-election-原理解析&#34;&gt;Raft Leader Election 原理解析&lt;/h1&gt;&#xA;&lt;p&gt;这篇文章主要想系统梳理一下 Raft Leader Election（Leader 选举）的核心原理。&lt;/p&gt;&#xA;&lt;p&gt;在分布式系统领域，&lt;a href=&#34;https://raft.github.io/raft.pdf&#34; title=&#34;In Search of an Understandable Consensus Algorithm(Extended Version)&#34;&gt;Raft&lt;/a&gt; 是一个非常经典的共识算法。相比 Paxos，Raft 最大的特点是“可理解性（Understandability）”，它将复杂的共识问题拆分为了几个相对独立的子问题：&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;Leader Election（Leader 选举）&lt;/li&gt;&#xA;&lt;li&gt;Log Replication（日志复制）&lt;/li&gt;&#xA;&lt;li&gt;Safety（安全性保证）&lt;/li&gt;&#xA;&lt;li&gt;Membership Change（成员变更）&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;p&gt;其中，Leader Election 是整个 Raft 的起点，因为在 Raft 中，整个集群只能存在一个节点负责“做决定”，这个节点就是 Leader。&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h1 id=&#34;1-为什么需要-leader&#34;&gt;1. 为什么需要 Leader&lt;/h1&gt;&#xA;&lt;p&gt;一个分布式系统想要对外提供服务，往往需要由多个节点组成一个分布式集群。而一旦系统进入分布式环境后，就必须面对一个核心问题：如何保证多个节点之间的数据一致性。&lt;/p&gt;&#xA;&lt;p&gt;例如：&lt;/p&gt;&#xA;&lt;pre&gt;&lt;code class=&#34;language-text&#34;&gt;Client A: set x = 1&#xA;Client B: set x = 2&#xA;&lt;/code&gt;&lt;/pre&gt;&#xA;&lt;p&gt;如果多个节点都能同时处理写请求，那么网络延迟、消息乱序、节点宕机、网络分区等问题，都可能导致各节点最终状态出现分歧，这就是经典的分布式一致性（Consensus）问题。&lt;/p&gt;&#xA;&lt;p&gt;Raft 对这个问题的解决方案是使用复制状态机（Replicated State Machine）模型。它并不直接同步“状态”，而是同步操作日志（Replicated Log）：&lt;/p&gt;&#xA;&lt;pre&gt;&lt;code class=&#34;language-text&#34;&gt;set x = 1&#xA;set y = 2&#xA;delete z&#xA;&lt;/code&gt;&lt;/pre&gt;&#xA;&lt;p&gt;只要所有节点：&lt;/p&gt;</description>
 			</item>
 	</channel>
 </rss>
