@@ -30,6 +30,9 @@ menus:
     - name: "Home"
       url: ""
       weight: 1
+    - name: "Projects"
+      url: "/projects/"
+      weight: 3
     - name: "About"
       url: "/about/"
       weight: 5
