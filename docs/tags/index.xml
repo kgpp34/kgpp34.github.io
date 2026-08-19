@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 	<channel>
-		<title>Tags on kgpp34 space</title>
+		<title>tags on kgpp34 space</title>
 		<link>https://kgpp34.github.io/tags/</link>
-		<description>Recent content in Tags on kgpp34 space</description>
+		<description>Recent content in tags on kgpp34 space</description>
 		<generator>Hugo</generator>
 		<language>zh-CN</language>
 		
@@ -14,7 +14,7 @@
 		
 			<atom:link href="https://kgpp34.github.io/tags/index.xml" rel="self" type="application/rss+xml" />
 			<item>
-				<title>EBPF</title>
+				<title>eBPF</title>
 				<link>https://kgpp34.github.io/tags/ebpf/</link>
 				<pubDate>Thu, 20 Aug 2026 00:10:00 +0800</pubDate>
 				<guid>https://kgpp34.github.io/tags/ebpf/</guid>
@@ -35,7 +35,7 @@
 				<description></description>
 			</item>
 			<item>
-				<title>Etcd</title>
+				<title>etcd</title>
 				<link>https://kgpp34.github.io/tags/etcd/</link>
 				<pubDate>Tue, 16 Jun 2026 17:00:00 +0800</pubDate>
 				<guid>https://kgpp34.github.io/tags/etcd/</guid>
@@ -49,7 +49,7 @@
 				<description></description>
 			</item>
 			<item>
-				<title>K8s</title>
+				<title>k8s</title>
 				<link>https://kgpp34.github.io/tags/k8s/</link>
 				<pubDate>Thu, 11 Jun 2026 16:50:00 +0800</pubDate>
 				<guid>https://kgpp34.github.io/tags/k8s/</guid>

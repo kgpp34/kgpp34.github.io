@@ -3,6 +3,7 @@ baseURL: "https://kgpp34.github.io/"
 publishDir: "docs"
 locale: "zh-CN"
 ignoreFiles: ["\\.DS_Store$"]
+titleCaseStyle: "None"
 
 markup:
   highlight:
