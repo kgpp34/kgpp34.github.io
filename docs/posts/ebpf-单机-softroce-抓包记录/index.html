@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>eBPF 单机 SoftRoCE 抓包记录 | kgpp34 space</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/katex.min.css"
+  integrity="sha384-3UiQGuEI4TTMaFmGIZumfRPtfKQ3trwQE2JgosJxCnGmQpL/lJdjpcHkaaFwHlcI"
+  crossorigin="anonymous"
+/>
+<script
+  defer
+  src="https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/katex.min.js"
+  integrity="sha384-G0zcxDFp5LWZtDuRMnBkk3EphCK1lhEf4UEyEM693ka574TZGwo4IWwS6QLzM/2t"
+  crossorigin="anonymous"
+></script>
+<script
+  defer
+  src="https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/contrib/auto-render.min.js"
+  integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05"
+  crossorigin="anonymous"
+></script>
+
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/projects/">Projects</a></li>
+      
+      <li><a href="/about/">About</a></li>
+      
+      <li><a href="/posts/">Posts</a></li>
+      
+      <li><a href="/tags/">Tags</a></li>
+      
+      <li><a href="/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">eBPF 单机 SoftRoCE 抓包记录</span></h1>
+
+<h2 class="date">2026/08/20</h2>
+</div>
+
+<main>
+<h1 id="ebpf-单机-softroce-抓包记录">eBPF 单机 SoftRoCE 抓包记录</h1>
+<h2 id="一问题介绍">一、问题介绍</h2>
+<p>最近在搞 <em>RDMA</em> 相关的内容，为了更好的学习，就想在本机用 <em>SoftRoCE</em> 抓包看看协议，但是在这过程中通过 <em>tcpdump</em> 并没有抓到任何内容，反而是最后靠着 <em>eBPF</em> hook 到内核函数，最终找到了这些数据包，下面是问题发现的过程。</p>
+<p>先简单交代下背景，方便没有接触过的同学：<em>RDMA</em>（Remote Direct Memory Access，远程直接内存访问）能让网卡<strong>直接读写远端内存</strong>，数据不用双方 CPU 一遍遍搬运，是高带宽低延迟场景（HPC、分布式存储、GPU 分布式训练）的核心技术。<em>RoCEv2</em> 是它最常见的落地形态——把 RDMA 报文装进 <strong>UDP（目的端口固定 4791）</strong> 再走 IP。而 <em>SoftRoCE</em>（内核模块名 <code>rxe</code>）是 Linux 自带的<strong>纯软件 RDMA 实现</strong>，没有 RDMA 网卡也能把整套协议跑起来，正好用来学习。</p>
+<h3 id="环境">环境</h3>
+<p>要在本机（无实际的 <em>RDMA</em> 设备）抓包看 RDMA 协议，普遍的做法是使用 <em>SoftRoCE</em> 来通过内核模拟，我的测试环境是一台 Ubuntu 24.04 虚拟机（ARM64），内核版本是 <strong>6.8.0-137</strong>，装了 rdma-core；并且 <em>rxe0</em> 设备挂在回环口 <em>lo</em> 上。</p>
+<pre><code>xxxxxxx@ubuntu:~$ rdma link show 
+link rxe0/1 state ACTIVE physical_state LINK_UP netdev lo
+</code></pre>
+<p>实验的时候用了经典的 <code>ibv_rc_pingpong</code> 来做测试，即 client 和 server 端各建一个 QP，互相发 1024 字节的数据包，共 50 次迭代。</p>
+<h3 id="实验开始">实验开始</h3>
+<p>实验的思路也很简单，需要开三个终端：</p>
+<pre><code class="language-bash"># 终端 A：抓包（RoCEv2 走 UDP 4791）
+sudo tcpdump -i lo -nn -XX 'udp port 4791'
+
+# 终端 B：服务端
+ibv_rc_pingpong -d rxe0 -g 1 -p 5050 -s 1024 -n 50
+
+# 终端 C：客户端
+ibv_rc_pingpong -d rxe0 -g 1 127.0.0.1 -p 5050 -s 1024 -n 50
+</code></pre>
+<p>执行后，可以发现 server 端和 client 端都有结果：</p>
+<pre><code>102400 bytes in 0.00 seconds = 483.30 Mbit/sec
+50 iters in 0.00 seconds = 33.90 usec/iter
+</code></pre>
+<p><em>RDMA</em> 的确是通了。可回到终端 A，<strong>tcpdump 屏幕上除了连接建立时的几行 TCP，什么都没有</strong>。</p>
+<hr>
+<h2 id="二初步排查">二、初步排查</h2>
+<p>抓包抓不到，我一般会怀疑</p>
+<ul>
+<li>包可能走的网卡设备不对，不是 <em>lo</em></li>
+<li>包可能被 <em>netfilter</em> 过滤了&quot;</li>
+<li>或者是包可能抓取的时机不对</li>
+</ul>
+<h3 id="检查-lo-网卡的计数器">检查 lo 网卡的计数器</h3>
+<pre><code class="language-bash">ip -s link show lo   # 跑 pingpong 前后各记一次
+</code></pre>
+<p>结果：pingpong 前后，lo 的 RX/TX 各只增加了 <strong>11 个包 / 697 字节</strong>。这 11 个包正好是建立 RDMA 连接用的 <strong>TCP 控制通道</strong>（三次握手、交换连接信息、挥手）。如果 200 个 RoCEv2 数据报文真的从 lo 走，计数器绝不可能是这个量级。</p>
+<blockquote>
+<p>结论：数据报文<strong>根本没经过 lo 接口</strong>。</p>
+</blockquote>
+<h3 id="检查-iptables">检查 iptables</h3>
+<pre><code class="language-bash">sudo iptables -A OUTPUT -p udp --dport 4791 -j LOG --log-prefix 'RXE-OUT: '
+sudo iptables -A INPUT  -p udp --sport 4791 -j LOG --log-prefix 'RXE-IN:  '
+# 跑完 pingpong 后：
+sudo dmesg | grep RXE
+</code></pre>
+<p>netfilter 的钩子挂在 <strong>IP 协议栈的进出路径</strong>上。只要报文调用过 <code>ip_local_out</code>（发包）或 <code>ip_local_deliver</code>（收包），就必然经过这两个钩子。结果 <code>dmesg</code> 里 <code>RXE-OUT</code>、<code>RXE-IN</code> <strong>一条都没有</strong>。</p>
+<blockquote>
+<p>结论：报文<strong>连 IP 协议栈都没进</strong>。</p>
+</blockquote>
+<h3 id="检查-rxe-源码">检查 rxe 源码</h3>
+<p>前两个检查项说明了这个包不在网络栈里，但是没办法说明是在哪儿绕开网络协议栈的。然后我看了下 6.8 内核的 rxe 源码，位置在 <code>drivers/infiniband/sw/rxe/rxe_net.c</code>：</p>
+<blockquote>
+<p>在线源码（可点开看全文）：</p>
+<ul>
+<li><a href="https://elixir.bootlin.com/linux/v6.8/source/drivers/infiniband/sw/rxe/rxe_net.c">elixir.bootlin.com — rxe_net.c @ v6.8</a></li>
+<li><a href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/drivers/infiniband/sw/rxe/rxe_net.c?h=v6.8">git.kernel.org — v6.8 版本的 rxe_net.c</a></li>
+</ul>
+</blockquote>
+<p>关键逻辑其实就一小段。发送时 <code>rxe_xmit_packet</code> 里有个判断：</p>
+<pre><code class="language-c">if (pkt-&gt;mask &amp; RXE_LOOPBACK_MASK)
+	err = rxe_loopback(skb, pkt);   /* ← 内部捷径 */
+else
+	err = rxe_send(skb, pkt);       /* 正常路径：ip_local_out() */
+</code></pre>
+<p>再看 <code>rxe_loopback</code> 干了什么（完整实现见上面的链接）：</p>
+<pre><code class="language-c">static int rxe_loopback(struct sk_buff *skb, struct rxe_pkt_info *pkt)
+{
+	...
+	/* 剥掉 IP 头 */
+	if (skb-&gt;protocol == htons(ETH_P_IP))
+		skb_pull(skb, sizeof(struct iphdr));
+	else
+		skb_pull(skb, sizeof(struct ipv6hdr));
+	/* 剥掉 UDP 头 */
+	skb_pull(skb, sizeof(struct udphdr));
+	/* 直接丢给接收处理，绕过整个网络栈 */
+	rxe_rcv(skb);
+	return 0;
+}
+</code></pre>
+<p><strong>关键就在 <code>RXE_LOOPBACK_MASK</code></strong>：当报文的目的地址是&quot;本地同一个 rxe 设备&quot;时，这个标志位被置上。于是发送路径不再走 <code>rxe_send()</code>（那条路会调用 <code>ip_local_out()</code> 进入网络栈），而是<strong>手工把 IP 头、UDP 头剥掉，直接把报文调进接收函数 <code>rxe_rcv()</code></strong>。 所以因为skb这个对象已经被剥掉了外层 header（内核中是网络协议栈实现的这部分），因此可以推断出之后的部分就不会继续走网络协议栈了，从函数 <strong><code>rxe_rcv()</code></strong> 也能够看出来：</p>
+<pre><code class="language-c">/* rxe_rcv is called from the interface driver */
+void rxe_rcv(struct sk_buff *skb)
+{
+	int err;
+	struct rxe_pkt_info *pkt = SKB_TO_PKT(skb);
+	struct rxe_dev *rxe = pkt-&gt;rxe;
+
+	if (unlikely(skb-&gt;len &lt; RXE_BTH_BYTES))
+		goto drop;
+
+	if (rxe_chk_dgid(rxe, skb) &lt; 0)
+		goto drop;
+
+	pkt-&gt;opcode = bth_opcode(pkt);
+	pkt-&gt;psn = bth_psn(pkt);
+	pkt-&gt;qp = NULL;
+	pkt-&gt;mask |= rxe_opcode[pkt-&gt;opcode].mask;
+
+	if (unlikely(skb-&gt;len &lt; header_size(pkt)))
+		goto drop;
+
+	err = hdr_check(pkt);
+	if (unlikely(err))
+		goto drop;
+
+	err = rxe_icrc_check(skb, pkt);
+	if (unlikely(err))
+		goto drop;
+
+	rxe_counter_inc(rxe, RXE_CNT_RCVD_PKTS);
+
+	if (unlikely(bth_qpn(pkt) == IB_MULTICAST_QPN))
+		rxe_rcv_mcast_pkt(rxe, skb);
+	else
+		rxe_rcv_pkt(pkt, skb);
+
+	return;
+
+drop:
+	if (pkt-&gt;qp)
+		rxe_put(pkt-&gt;qp);
+
+	kfree_skb(skb);
+	ib_device_put(&amp;rxe-&gt;ib_dev);
+}
+</code></pre>
+<p>所以上面的三个现象：</p>
+<ul>
+<li>lo 计数器不动</li>
+<li>netfilter 无日志</li>
+<li>tcpdump 没包</li>
+</ul>
+<p>其实指向同一个根因：<strong>rxe 在单机自回环时，报文走的是内核驱动的内部捷径。</strong></p>
+<blockquote>
+<p>但是要注意的是，这是 rxe 的<strong>特性而非 bug</strong>：纯软件模拟，同设备自通信没必要真去绕一圈协议栈。真机上（真实 RoCE 网卡），报文是真实发到网线再收回来的，<code>tcpdump -i &lt;网卡&gt;</code> 完全正常。<strong>这次&quot;抓不到&quot;纯粹是单机学习场景的锅。</strong></p>
+</blockquote>
+<hr>
+<h2 id="三veth--netns">三、veth + netns</h2>
+<p>定位到上面的问题之后，我第一个想到的绕过去的办法很朴素：<strong>别让两端在同一个设备里回环，让报文真的穿过一个网络设备。</strong></p>
+<p>做法也标准：建两个网络命名空间（netns），中间用 veth 虚拟网线连起来，两端各挂一个 rxe，这样 server 和 client 就能通信了：</p>
+<pre><code class="language-bash"># 建两个 netns，用 veth 连起来
+sudo ip netns add ns0
+sudo ip netns add ns1
+sudo ip link add veth0 type veth peer name veth1
+sudo ip link set veth0 netns ns0
+sudo ip link set veth1 netns ns1
+sudo ip netns exec ns0 ip link set veth0 up
+sudo ip netns exec ns1 ip link set veth1 up
+sudo ip netns exec ns0 ip addr add 192.168.50.1/24 dev veth0
+sudo ip netns exec ns1 ip addr add 192.168.50.2/24 dev veth1
+
+# 各自在里面创建 rxe 设备
+sudo ip netns exec ns0 ip link add rxe0 type rxe local 192.168.50.1
+sudo ip netns exec ns1 ip link add rxe1 type rxe local 192.168.50.2
+</code></pre>
+<p>结果发现问题比想象中多：<strong>在 netns 里根本看不到设备</strong>。</p>
+<pre><code class="language-bash">sudo ip netns exec ns0 rdma link show   # 空的？
+sudo ip netns exec ns0 ibv_devices     # 也找不到
+</code></pre>
+<p>而在宿主机的 <code>/sys/class/infiniband/</code> 里，<code>rxe0</code> 又是真实存在的。也就是说：设备在 host 侧&quot;看得见&quot;，在这个 netns 里却&quot;用不上&quot;。</p>
+<p>查了一圈原因：<strong>rxe 在 6.8 内核上不支持 netns</strong>。rxe 加载时把 UDP 4791 的监听 socket 建在默认命名空间里，别的 netns 里建的 rxe 只是个&quot;壳&quot;，数据根本没地方送。</p>
+<p>顺着这条线又查了查上游，官方其实已经把支持补丁合进主线了——<em>&ldquo;RDMA/rxe: Add the support that rxe can work in net namespace&rdquo;</em>（见 <a href="https://lwn.net/Articles/1061946/">LWN 上的 patch 系列</a>，commit <code>d0ee939f7703f</code>），只是我这台 <strong>6.8.0-137</strong> 还没带上。</p>
+<p>所以摆在我面前的就是三条路：</p>
+<table>
+	<thead>
+			<tr>
+					<th>方案</th>
+					<th>做法</th>
+					<th>代价</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>A. 升级内核</td>
+					<td>换到带补丁的 mainline 内核</td>
+					<td>ARM64 的 mainline 内核包有缺 DTB 起不来的风险</td>
+			</tr>
+			<tr>
+					<td>B. 回迁补丁</td>
+					<td>把上游 patch 打到 6.8，重编 <code>rdma_rxe.ko</code></td>
+					<td>跨约 10 个内核版本，要人工处理 API 冲突</td>
+			</tr>
+			<tr>
+					<td>C. <strong>eBPF 抓包</strong></td>
+					<td>无侵入，在内核收发路径上挂探针</td>
+					<td>零风险，几分钟搞定</td>
+			</tr>
+	</tbody>
+</table>
+<p>所以我选了 C，理由很实在：<strong>我要的是&quot;看到报文&quot;，不是&quot;搭一套更真实的拓扑&quot;。</strong></p>
+<hr>
+<h2 id="四用-ebpf-抓包">四、用 eBPF 抓包</h2>
+<h3 id="41-探针挂在哪">4.1 探针挂在哪</h3>
+<p>要抓到报文，得找到所有报文都会经过的函数。上面源码里正好有两个：<code>rxe_xmit_packet</code>（发送）和 <code>rxe_rcv</code>（接收）：</p>
+<table>
+	<thead>
+			<tr>
+					<th>函数</th>
+					<th>探针参数</th>
+					<th>此刻 <code>skb-&gt;data</code> 指向</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td><code>rxe_xmit_packet</code></td>
+					<td>arg2 = skb</td>
+					<td><strong>完整三层头</strong>（IP + UDP + BTH + 负载）——发送侧已拼好</td>
+			</tr>
+			<tr>
+					<td><code>rxe_rcv</code></td>
+					<td>arg0 = skb</td>
+					<td><strong>BTH 起始处</strong>——IP/UDP 已被剥掉</td>
+			</tr>
+	</tbody>
+</table>
+<ul>
+<li>抓 <code>rxe_xmit_packet</code>，看到的是&quot;要发出去的样子&quot;，和真机上 tcpdump 抓到的内容一致；</li>
+<li>抓 <code>rxe_rcv</code>，看到的是&quot;收进来之后的样子&quot;。</li>
+</ul>
+<p>两个加起来，发送和接收就都覆盖了。</p>
+<h3 id="42-前置条件与脚本">4.2 前置条件与脚本</h3>
+<p>要想实现这个功能，我们需要：</p>
+<ul>
+<li><code>bpftrace</code></li>
+<li>内核 BTF（<code>/sys/kernel/btf/vmlinux</code>，解析内核结构体用）</li>
+<li>rxe 符号可见（<code>grep rxe_ /proc/kallsyms</code>）</li>
+</ul>
+<p>抓包脚本为（对前 2 个发送报文打印全文，25 秒自动退出）：</p>
+<pre><code class="language-awk">BEGIN { @cs = 0; @cr = 0; }
+
+kprobe:rxe_xmit_packet {
+  @cs++;
+  $n = @cs;
+  $skb = (struct sk_buff *)arg2;
+  $len = $skb-&gt;len;
+  $data = $skb-&gt;data;
+  printf(&quot;\n[TX #%d] len=%d\n&quot;, $n, $len);
+  if ($n &lt;= 2) {
+    printf(&quot;%r&quot;, buf($data, $len));   // 一次输出整包
+    printf(&quot;\n&quot;);
+  }
+}
+
+interval:s:25 { printf(&quot;\n=== totals TX=%d RX=%d ===\n&quot;, @cs, @cr); exit(); }
+</code></pre>
+<p>三个亲测的坑，写出来帮大家省时间：</p>
+<ol>
+<li><strong>bpftrace v0.20.2 不支持 <code>for</code> 循环</strong>，读固定字节数要用 <code>unroll(N)</code>；</li>
+<li><strong><code>unroll()</code> 上限是 100</strong>（不可配置），所以&quot;逐字节打印&quot;撑不起 1068 字节的大包——要用上面的 <code>%r</code> + <code>buf()</code> 一次性输出整包；</li>
+<li><strong><code>%r</code> 输出的其实是 <code>\xNN</code> 转义文本，不是裸二进制</strong>，转 pcap 前要先按 <code>\xNN</code> 还原（脚本见后文）。</li>
+</ol>
+<p>跑完，输出长这样（完整文件见文末）：</p>
+<pre><code>[TX #1] len=1068
+45 00 04 2c 20 dd 40 00 40 11 00 00 7f 00 00 01
+7f 00 00 01 c4 62 12 b7 04 18 00 00 04 00 ff ff
+00 00 00 21 80 07 93 eb 7b 7b 7b 7b ...
+...
+=== totals TX=200 RX=200 ===
+</code></pre>
+<p><code>TX=200 RX=200</code>：50 次迭代 × 2 个方向 × 每方向（1 个 SEND + 1 个 ACK）= 200，数量对得上，说明每个报文都数到了。</p>
+<hr>
+<h2 id="五报文解析">五、报文解析</h2>
+<h3 id="51-包-1rc-send-only数据包1068-字节">5.1 包 1：RC SEND ONLY（数据包，1068 字节）</h3>
+<pre><code>偏移   十六进制                        字段
+00    45                             IPv4：版本 4、IHL=5（20 字节头）
+01    00                             DSCP/ECN
+02-03 04 2c                          总长度 = 0x042c = 1068
+04-05 20 dd                          ID
+06-07 40 00                          DF=1（不分片）
+08    40                             TTL = 64
+09    11                             协议 = 17（UDP）
+12-15 7f 00 00 01                    源 IP = 127.0.0.1
+16-19 7f 00 00 01                    目的 IP = 127.0.0.1
+20-21 c4 62                          源端口 = 50274（动态分配）
+22-23 12 b7                          目的端口 = 0x12b7 = 4791（RoCEv2 固定端口）
+24-25 04 18                          UDP 长度 = 0x0418 = 1048
+28    04                             BTH opcode = 0x04 = RC SEND ONLY
+29    00                             BTH flags：SE=0 M=0 Pad=0 TVer=0
+30-31 ff ff                          BTH P_Key = 0xffff
+32-35 00 00 00 21                    BTH 目的 QPN = 0x21 = 33
+36-39 80 07 93 eb                    BTH：A=1（要求确认），PSN = 0x0793eb = 496619
+40+   7b 7b 7b ...                  负载 = 1024 × 0x7b（'{'，pingpong 的填充值）
+末尾  30 0a 0a 5b                    ICRC（4 字节，驱动算的）
+</code></pre>
+<p>几个值得注意的点：</p>
+<ul>
+<li><strong>目的端口 0x12b7 = 4791</strong>：UDP 负载里装的是不是 RDMA 报文，就看这个端口。</li>
+<li><strong>源端口不是 4791</strong>（本例 50274）：源端口由驱动按 QP 动态分配，只有目的端口固定。真机上也常看到各种高端口。</li>
+<li><strong>opcode 0x04 = RC SEND ONLY</strong>：单包发送，一次发完。</li>
+<li><strong>BTH 里 A=1</strong>（第 8 字节最高位）：请求对方回 ACK。</li>
+<li><strong>负载是 0x7b，也就是字符 <code>'{'</code></strong>：pingpong 用它把包填满，肉眼可辨。</li>
+<li><strong>总长度里包含了 ICRC</strong>：1068 = IP 20 + UDP 8 + BTH 12 + 负载 1024 + ICRC 4。softRoCE 是软件实现，校验由驱动自己算；真机上这是网卡硬件的活儿。</li>
+</ul>
+<h3 id="52-包-2rc-acknowledge确认包48-字节">5.2 包 2：RC ACKNOWLEDGE（确认包，48 字节）</h3>
+<pre><code>偏移   十六进制                        字段
+00-19 （IPv4：总长 0x30=48，src/dst=127.0.0.1）
+20-27 c4 62 12 b7 00 1c 00 00        UDP：dst 4791，长度 0x1c=28
+28    11                             BTH opcode = 0x11 = RC ACKNOWLEDGE
+30-31 ff ff                          P_Key = 0xffff
+32-35 00 00 00 22                    BTH 目的 QPN = 0x22 = 34
+36-39 00 07 93 eb                    A=0，PSN = 0x0793eb = 496619
+40-43 1f 00 00 01                    AETH：syndrome 0x1f，MSN = 1
+44-47 00 00 00 00                    补齐到 48 字节
+</code></pre>
+<p>这个包正好能看到 RC（Reliable Connection，可靠连接）的两个特点：</p>
+<ol>
+<li><strong>ACK 的 PSN（496619）和刚才数据包的 PSN（496619）一模一样</strong>。确认包的意义就是&quot;我收到了你这个序号&quot;，两个包放在一起，可靠连接的语义就对应上了。</li>
+<li><strong>AETH 里的 MSN = 1</strong>（内核定义 <code>AETH_ACK_UNLIMITED</code> = 0x1f）：表示&quot;这是我收到的第 1 个报文&quot;，和&quot;只发了 1 个数据包&quot;吻合。</li>
+</ol>
+<h3 id="53-bth-结构">5.3 BTH 结构</h3>
+<p>BTH 的字段布局，以内核 <a href="https://elixir.bootlin.com/linux/v6.8/source/drivers/infiniband/sw/rxe/rxe_hdr.h">rxe_hdr.h @ v6.8</a> 为准，抓包字节和它<strong>一一对应</strong>：</p>
+<table>
+	<thead>
+			<tr>
+					<th>字节</th>
+					<th>字段</th>
+					<th>说明</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>0</td>
+					<td><strong>OpCode</strong></td>
+					<td>报文类型</td>
+			</tr>
+			<tr>
+					<td>1</td>
+					<td>SE(bit7) / M(bit6) / Pad(bit5-4) / <strong>TVer(bit3-0)</strong></td>
+					<td>传输头版本，固定 0</td>
+			</tr>
+			<tr>
+					<td>2-3</td>
+					<td><strong>P_Key</strong></td>
+					<td>分区键，默认 0xffff</td>
+			</tr>
+			<tr>
+					<td>4-7</td>
+					<td>FECN(bit31) / BECN(bit30) / <strong>目的 QPN(低 24 位)</strong></td>
+					<td>收包方靠它找到自己的 QP</td>
+			</tr>
+			<tr>
+					<td>8-11</td>
+					<td><strong>A(bit31) / PSN(低 24 位)</strong></td>
+					<td>A=要求确认；PSN=包序号</td>
+			</tr>
+	</tbody>
+</table>
+<p>网上流传的 opcode 表可能存在错误：有把 SEND ONLY 写成 0x08、ACK 写成 0x14 的。正确值是 SEND ONLY=0x04、ACK=0x11、WRITE ONLY=0x0a、RDMA READ REQUEST=0x0c，以内核 <a href="https://elixir.bootlin.com/linux/v6.8/source/include/rdma/ib_pack.h">ib_pack.h @ v6.8</a> 和真实抓包为准。</p>
+<hr>
+<h2 id="六把包装进-wireshark">六、把包装进 Wireshark</h2>
+<p>抓到的报文是&quot;去掉以太网头、从 IPv4 头开始&quot;的形态。转成 pcap 时用 <strong>linktype 101（RAW IP）</strong> 封装。Wireshark 对 UDP 4791 有完整的 RoCEv2 解析，界面里显示为 <strong>RRoCE</strong>，BTH 的 opcode 直接给出名字，比如 &ldquo;RC - SEND Only&rdquo;。</p>
+<p><strong>转换脚本</strong>（<code>\xNN</code> 还原 + 提取前 2 个发送报文 + 写 pcap）：</p>
+<pre><code class="language-python">import re, struct
+src, dst = '/tmp/cap_full.txt', '/tmp/rxe-tx-full.pcap'
+text = open(src, 'rb').read()
+out = bytearray(); i = 0
+while i &lt; len(text):
+    if text[i] == 0x5c and text[i+1:i+2] == b'x':
+        out.append(int(text[i+2:i+4], 16)); i += 4
+    else:
+        out.append(text[i]); i += 1
+raw = bytes(out)
+pkts = []
+for w in (b'[TX #1]', b'[TX #2]'):
+    m = re.search(rb'\n' + w + rb' len=(\d+)\n', raw)
+    n = int(m.group(1)); d = raw[m.end():m.end()+n]
+    if d[:1] == b'\x45': pkts.append(d)
+with open(dst, 'wb') as f:
+    f.write(struct.pack('&lt;IHHIIII', 0xA1B2C3D4, 2, 4, 0, 0, 65535, 101))
+    for p in pkts:
+        f.write(struct.pack('&lt;IIII', 0, 0, len(p), len(p))); f.write(p)
+print(f'wrote {len(pkts)} packets')
+</code></pre>
+<p>先在虚拟机里用 tshark 验证一下：</p>
+<pre><code class="language-bash">tshark -r /tmp/rxe-tx-full.pcap -nn
+#   1  127.0.0.1 → 127.0.0.1  RRoCE 1068 RC Send Only QP=0x000021
+#   2  127.0.0.1 → 127.0.0.1  RRoCE   48 RC Acknowledge QP=0x000022
+</code></pre>
+<p>拷回本机，<code>open -a Wireshark rxe-tx-full.pcap</code>：</p>
+<p><img src="ebpf-rdma-send.png" alt="Wireshark 里看到的 SEND 报文（RRoCE 完整解析）"></p>
+<p>点开任意一包，中间的解析树从上到下就是 IP → UDP → InfiniBand（RRoCE）→ BTH，BTH 里 Opcode、QPN、PSN 都有名字，直接对着截图看就行。</p>
+<hr>
+<h2 id="参考">参考</h2>
+<ul>
+<li>内核源码（在线可读）：
+<ul>
+<li><a href="https://elixir.bootlin.com/linux/v6.8/source/drivers/infiniband/sw/rxe/rxe_net.c">rxe_net.c @ v6.8</a>（收发路径与 loopback）</li>
+<li><a href="https://elixir.bootlin.com/linux/v6.8/source/drivers/infiniband/sw/rxe/rxe_hdr.h">rxe_hdr.h @ v6.8</a>（BTH 等报文头结构）</li>
+<li><a href="https://elixir.bootlin.com/linux/v6.8/source/include/rdma/ib_pack.h">ib_pack.h @ v6.8</a>（opcode 定义）</li>
+</ul>
+</li>
+<li>LWN：<a href="https://lwn.net/Articles/1061946/">RDMA/rxe: Add the support that rxe can work in net namespace</a>（上游 netns 支持，已入主线）</li>
+</ul>
+
+</main>
+
+  <footer>
+  
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  if (typeof renderMathInElement === "function") {
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left: "$$", right: "$$", display: true},
+        {left: "$", right: "$", display: false},
+        {left: "\\(", right: "\\)", display: false}
+      ],
+      throwOnError: false
+    });
+  }
+});
+</script>
+
+
+  
+  <hr/>
+  © 2026 kgpp34 | <a href="https://github.com/kgpp34">GitHub</a> | <a href="https://www.linkedin.com/in/young-lh-756841233/">LinkedIn</a> | <a href="mailto:younglh.dlut@gmail.com">Email</a>
+  
+  </footer>
+  </body>
+</html>
+

@@ -2,7 +2,7 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 	<channel>
 		<title>Home on kgpp34 space</title>
-		<link>http://localhost:1313/</link>
+		<link>https://kgpp34.github.io/</link>
 		<description>Recent content in Home on kgpp34 space</description>
 		<generator>Hugo</generator>
 		<language>zh-CN</language>
@@ -10,36 +10,50 @@
 		
 		
 		
-			<lastBuildDate>Tue, 16 Jun 2026 17:00:00 +0800</lastBuildDate>
+			<lastBuildDate>Thu, 20 Aug 2026 00:10:00 +0800</lastBuildDate>
 		
-			<atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
+			<atom:link href="https://kgpp34.github.io/index.xml" rel="self" type="application/rss+xml" />
+			<item>
+				<title>eBPF 单机 SoftRoCE 抓包记录</title>
+				<link>https://kgpp34.github.io/posts/ebpf-%E5%8D%95%E6%9C%BA-softroce-%E6%8A%93%E5%8C%85%E8%AE%B0%E5%BD%95/</link>
+				<pubDate>Thu, 20 Aug 2026 00:10:00 +0800</pubDate>
+				<guid>https://kgpp34.github.io/posts/ebpf-%E5%8D%95%E6%9C%BA-softroce-%E6%8A%93%E5%8C%85%E8%AE%B0%E5%BD%95/</guid>
+				<description>&lt;h1 id=&#34;ebpf-单机-softroce-抓包记录&#34;&gt;eBPF 单机 SoftRoCE 抓包记录&lt;/h1&gt;&#xA;&lt;h2 id=&#34;一问题介绍&#34;&gt;一、问题介绍&lt;/h2&gt;&#xA;&lt;p&gt;最近在搞 &lt;em&gt;RDMA&lt;/em&gt; 相关的内容，为了更好的学习，就想在本机用 &lt;em&gt;SoftRoCE&lt;/em&gt; 抓包看看协议，但是在这过程中通过 &lt;em&gt;tcpdump&lt;/em&gt; 并没有抓到任何内容，反而是最后靠着 &lt;em&gt;eBPF&lt;/em&gt; hook 到内核函数，最终找到了这些数据包，下面是问题发现的过程。&lt;/p&gt;&#xA;&lt;p&gt;先简单交代下背景，方便没有接触过的同学：&lt;em&gt;RDMA&lt;/em&gt;（Remote Direct Memory Access，远程直接内存访问）能让网卡&lt;strong&gt;直接读写远端内存&lt;/strong&gt;，数据不用双方 CPU 一遍遍搬运，是高带宽低延迟场景（HPC、分布式存储、GPU 分布式训练）的核心技术。&lt;em&gt;RoCEv2&lt;/em&gt; 是它最常见的落地形态——把 RDMA 报文装进 &lt;strong&gt;UDP（目的端口固定 4791）&lt;/strong&gt; 再走 IP。而 &lt;em&gt;SoftRoCE&lt;/em&gt;（内核模块名 &lt;code&gt;rxe&lt;/code&gt;）是 Linux 自带的&lt;strong&gt;纯软件 RDMA 实现&lt;/strong&gt;，没有 RDMA 网卡也能把整套协议跑起来，正好用来学习。&lt;/p&gt;&#xA;&lt;h3 id=&#34;环境&#34;&gt;环境&lt;/h3&gt;&#xA;&lt;p&gt;要在本机（无实际的 &lt;em&gt;RDMA&lt;/em&gt; 设备）抓包看 RDMA 协议，普遍的做法是使用 &lt;em&gt;SoftRoCE&lt;/em&gt; 来通过内核模拟，我的测试环境是一台 Ubuntu 24.04 虚拟机（ARM64），内核版本是 &lt;strong&gt;6.8.0-137&lt;/strong&gt;，装了 rdma-core；并且 &lt;em&gt;rxe0&lt;/em&gt; 设备挂在回环口 &lt;em&gt;lo&lt;/em&gt; 上。&lt;/p&gt;&#xA;&lt;pre&gt;&lt;code&gt;xxxxxxx@ubuntu:~$ rdma link show &#xA;link rxe0/1 state ACTIVE physical_state LINK_UP netdev lo&#xA;&lt;/code&gt;&lt;/pre&gt;&#xA;&lt;p&gt;实验的时候用了经典的 &lt;code&gt;ibv_rc_pingpong&lt;/code&gt; 来做测试，即 client 和 server 端各建一个 QP，互相发 1024 字节的数据包，共 50 次迭代。&lt;/p&gt;</description>
+			</item>
 			<item>
 				<title>Etcd Raft 02: PreVote 机制</title>
-				<link>http://localhost:1313/posts/etcd-raft-02.md/</link>
+				<link>https://kgpp34.github.io/posts/etcd-raft-02.md/</link>
 				<pubDate>Tue, 16 Jun 2026 17:00:00 +0800</pubDate>
-				<guid>http://localhost:1313/posts/etcd-raft-02.md/</guid>
+				<guid>https://kgpp34.github.io/posts/etcd-raft-02.md/</guid>
 				<description>&lt;h1 id=&#34;etcd-raft-二prevote-机制&#34;&gt;etcd Raft (二)：PreVote 机制&lt;/h1&gt;&#xA;&lt;p&gt;从这篇开始，我准备总结一些实际生产中的issue 和解决方案，这一篇主要聚焦于 Raft 选举中的 PreVote 机制。&lt;/p&gt;&#xA;&lt;p&gt;在系统的介绍 PreVote 机制之前，需要先讲清楚这种机制解决了什么场景的问题。&lt;/p&gt;&#xA;&lt;h2 id=&#34;1-场景说明&#34;&gt;1. 场景说明&lt;/h2&gt;&#xA;&lt;p&gt;假设现在我们有一个三节点的 etcd 集群，当前的任期 Term = 5。&lt;/p&gt;&#xA;&lt;p&gt;&lt;img src=&#34;etcd-prevote-issue-01.png&#34; alt=&#34;正常状态：Term = 5&#34;&gt;&lt;/p&gt;&#xA;&lt;p&gt;当网络发生分区后，假设节点 C 与集群断开连接：&lt;/p&gt;&#xA;&lt;p&gt;&lt;img src=&#34;etcd-prevote-issue-02.png&#34; alt=&#34;网络分区：C 与集群断开&#34;&gt;&lt;/p&gt;&#xA;&lt;p&gt;在网络恢复后，假设节点 C 自身的 Term 已经到了50，那么它就会向其他节点发送 Term = 50 的消息，然后节点 A 发现 C 的 Term 更大，因此 A 强制退位，导致整个集群进行新一轮选举，而这个期间，集群处于不可写状态。&#xA;&lt;img src=&#34;etcd-prevote-issue-03.png&#34; alt=&#34;灾难：A 收到 term=50 的消息，强制退位&#34;&gt;&lt;/p&gt;&#xA;&lt;p&gt;这就是 etcd issue &lt;a href=&#34;https://github.com/etcd-io/etcd/issues/9333&#34;&gt;#9333&lt;/a&gt; 所描述的真实问题。etcd 维护者把这类节点叫做破坏性节点。那么在实际生产环境下，只要某个 etcd follower 的网络断开再恢复，就必然触发一次 leader 重选，Kubernetes 会因此抖动一下。&lt;/p&gt;&#xA;&lt;h2 id=&#34;2-prevote-的核心思想&#34;&gt;2. PreVote 的核心思想&lt;/h2&gt;&#xA;&lt;p&gt;为了解决这种场景带来的强制重新选举问题，就可以引入 PreVote 这种机制了，而这种机制的思想也比较简单：&lt;strong&gt;先问问自己能不能赢&lt;/strong&gt;。&lt;/p&gt;&#xA;&lt;p&gt;具体的做法就是：在真正自增 term、发起选举之前，先向其他节点问一句：&amp;ldquo;如果我现在发起选举，你们会投票给我吗？&amp;ldquo;只有得到多数人的肯定答复，才真正开始选举。&lt;/p&gt;&#xA;&lt;p&gt;上一篇文章其实提过 Raft 论文中有三种角色：&lt;/p&gt;</description>
 			</item>
 			<item>
 				<title>K8s Multiple CNI Solution: Multus</title>
-				<link>http://localhost:1313/posts/k8s-multiple-cni-solution-multus/</link>
+				<link>https://kgpp34.github.io/posts/k8s-multiple-cni-solution-multus/</link>
 				<pubDate>Thu, 11 Jun 2026 16:50:00 +0800</pubDate>
-				<guid>http://localhost:1313/posts/k8s-multiple-cni-solution-multus/</guid>
+				<guid>https://kgpp34.github.io/posts/k8s-multiple-cni-solution-multus/</guid>
 				<description>&lt;h1 id=&#34;1-为什么需要多网卡&#34;&gt;1. 为什么需要多网卡&lt;/h1&gt;&#xA;&lt;p&gt;传统微服务场景下，东西向网络流量通常不需要特别大的带宽，采用常规网卡即可满足需求。但在 AI 场景或其它高性能场景下，传统网卡就显得不够用了。因此，一种常见的做法是将流量分离：传统业务流量和管理流量依然走传统网卡，而其它流量走特定的网卡。然而，Kubernetes 默认的网络模型仅会给 Pod 分配一个网卡。要提供多网卡，必须有一种机制将不同的网卡设备也挂载到 Pod 的网络命名空间（netns）中。实现这种效果需要使用多 CNI，目前工业界普遍采用的成熟开源方案是 &lt;strong&gt;Multus&lt;/strong&gt;。&lt;/p&gt;&#xA;&lt;h1 id=&#34;2-cni-基础原理&#34;&gt;2. CNI 基础原理&lt;/h1&gt;&#xA;&lt;p&gt;要想了解 Multus CNI 是如何在现有 CNI 机制上进行扩展的，需要先简单了解相关的背景知识和 CNI 的基础内容。&lt;/p&gt;&#xA;&lt;h2 id=&#34;21-netns-网络命名空间&#34;&gt;2.1 netns 网络命名空间&lt;/h2&gt;&#xA;&lt;p&gt;Linux 会把网络虚拟化成独立的 netns。每个 netns 拥有独立的：&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;网络接口列表&lt;/li&gt;&#xA;&lt;li&gt;路由表&lt;/li&gt;&#xA;&lt;li&gt;iptables 规则链&lt;/li&gt;&#xA;&lt;li&gt;socket 表&lt;/li&gt;&#xA;&lt;li&gt;/proc/sys/net/ 参数&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;p&gt;网络接口/设备可以在 netns 之间移动（通过 &lt;code&gt;ip link set eth0 netns &amp;lt;pid&amp;gt;&lt;/code&gt;），但移动后原 netns 就看不到它了。veth pair 是例外——veth 是成对创建的，一端在 host netns，一端在 Pod netns，两端之间形成一条虚拟以太网链路，这样 Pod 即可正常发送和接收数据包。&lt;/p&gt;&#xA;&lt;p&gt;需要特别说明的是：netns 的生命周期绑定到&amp;quot;至少有一个引用&amp;quot;。意思是说，只要某个进程打开了 &lt;code&gt;/proc/&amp;lt;pid&amp;gt;/ns/net&lt;/code&gt; 这个文件，就持有了一个引用，即使进程退出，netns 也不会消亡（直到文件被关闭）。kubelet 把这个文件路径传给 CNI 二进制文件，就是为了让 CNI 能用 &lt;code&gt;setns(fd, CLONE_NEWNET)&lt;/code&gt; 系统调用进入那个 netns 配置接口。&lt;/p&gt;</description>
 			</item>
 			<item>
 				<title>Etcd Raft 01</title>
-				<link>http://localhost:1313/posts/etcd-raft-01/</link>
+				<link>https://kgpp34.github.io/posts/etcd-raft-01/</link>
 				<pubDate>Mon, 01 Jun 2026 15:43:52 +0800</pubDate>
-				<guid>http://localhost:1313/posts/etcd-raft-01/</guid>
+				<guid>https://kgpp34.github.io/posts/etcd-raft-01/</guid>
 				<description>&lt;h1 id=&#34;raft-leader-election-原理解析&#34;&gt;Raft Leader Election 原理解析&lt;/h1&gt;&#xA;&lt;p&gt;这篇文章主要想系统梳理一下 Raft Leader Election（Leader 选举）的核心原理。&lt;/p&gt;&#xA;&lt;p&gt;在分布式系统领域，&lt;a href=&#34;https://raft.github.io/raft.pdf&#34; title=&#34;In Search of an Understandable Consensus Algorithm(Extended Version)&#34;&gt;Raft&lt;/a&gt; 是一个非常经典的共识算法。相比 Paxos，Raft 最大的特点是“可理解性（Understandability）”，它将复杂的共识问题拆分为了几个相对独立的子问题：&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;Leader Election（Leader 选举）&lt;/li&gt;&#xA;&lt;li&gt;Log Replication（日志复制）&lt;/li&gt;&#xA;&lt;li&gt;Safety（安全性保证）&lt;/li&gt;&#xA;&lt;li&gt;Membership Change（成员变更）&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;p&gt;其中，Leader Election 是整个 Raft 的起点，因为在 Raft 中，整个集群只能存在一个节点负责“做决定”，这个节点就是 Leader。&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h1 id=&#34;1-为什么需要-leader&#34;&gt;1. 为什么需要 Leader&lt;/h1&gt;&#xA;&lt;p&gt;一个分布式系统想要对外提供服务，往往需要由多个节点组成一个分布式集群。而一旦系统进入分布式环境后，就必须面对一个核心问题：如何保证多个节点之间的数据一致性。&lt;/p&gt;&#xA;&lt;p&gt;例如：&lt;/p&gt;&#xA;&lt;pre&gt;&lt;code class=&#34;language-text&#34;&gt;Client A: set x = 1&#xA;Client B: set x = 2&#xA;&lt;/code&gt;&lt;/pre&gt;&#xA;&lt;p&gt;如果多个节点都能同时处理写请求，那么网络延迟、消息乱序、节点宕机、网络分区等问题，都可能导致各节点最终状态出现分歧，这就是经典的分布式一致性（Consensus）问题。&lt;/p&gt;&#xA;&lt;p&gt;Raft 对这个问题的解决方案是使用复制状态机（Replicated State Machine）模型。它并不直接同步“状态”，而是同步操作日志（Replicated Log）：&lt;/p&gt;&#xA;&lt;pre&gt;&lt;code class=&#34;language-text&#34;&gt;set x = 1&#xA;set y = 2&#xA;delete z&#xA;&lt;/code&gt;&lt;/pre&gt;&#xA;&lt;p&gt;只要所有节点：&lt;/p&gt;</description>
 			</item>
 			<item>
 				<title>About</title>
-				<link>http://localhost:1313/about/</link>
+				<link>https://kgpp34.github.io/about/</link>
 				<pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-				<guid>http://localhost:1313/about/</guid>
-				<description>&lt;p&gt;我是 kgpp34，主要做云原生开发和平台工程，关注在离线业务发布、调度器开发、QoS 管理、可观测体系，以及最近的 LLM Infra 和 Agent Sandbox Infra。更完整的经历和成果放在 &lt;a href=&#34;http://localhost:1313/cv/&#34;&gt;CV&lt;/a&gt; 页面。&lt;/p&gt;&#xA;&lt;p&gt;我比较倾向于把复杂问题拆成稳定的工程边界，而不是堆叠很多花哨功能。对我来说，平台的价值在于让发布、调度、诊断和治理都能以统一方式工作。&lt;/p&gt;&#xA;&lt;h2 id=&#34;links&#34;&gt;Links&lt;/h2&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;GitHub: &lt;a href=&#34;https://github.com/kgpp34&#34;&gt;kgpp34&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;LinkedIn: &lt;a href=&#34;https://www.linkedin.com/in/young-lh-756841233/&#34;&gt;young-lh-756841233&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;Projects: &lt;a href=&#34;https://github.com/kgpp34?tab=repositories&#34;&gt;github.com/kgpp34?tab=repositories&lt;/a&gt;&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;h2 id=&#34;focus&#34;&gt;Focus&lt;/h2&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;云原生平台与基础设施&lt;/li&gt;&#xA;&lt;li&gt;在离线混部与业务发布&lt;/li&gt;&#xA;&lt;li&gt;调度器与资源管理&lt;/li&gt;&#xA;&lt;li&gt;可观测与 SRE&lt;/li&gt;&#xA;&lt;li&gt;LLM Infra&lt;/li&gt;&#xA;&lt;li&gt;Agent Sandbox Infra&lt;/li&gt;&#xA;&lt;/ul&gt;</description>
+				<guid>https://kgpp34.github.io/about/</guid>
+				<description>&lt;p&gt;我是 kgpp34，主要做云原生开发和平台工程，关注在离线业务发布、调度器开发、QoS 管理、可观测体系，以及最近的 LLM Infra 和 Agent Sandbox Infra。更完整的经历和成果放在 &lt;a href=&#34;https://kgpp34.github.io/cv/&#34;&gt;CV&lt;/a&gt; 页面。&lt;/p&gt;&#xA;&lt;p&gt;我比较倾向于把复杂问题拆成稳定的工程边界，而不是堆叠很多花哨功能。对我来说，平台的价值在于让发布、调度、诊断和治理都能以统一方式工作。&lt;/p&gt;&#xA;&lt;h2 id=&#34;links&#34;&gt;Links&lt;/h2&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;GitHub: &lt;a href=&#34;https://github.com/kgpp34&#34;&gt;kgpp34&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;LinkedIn: &lt;a href=&#34;https://www.linkedin.com/in/young-lh-756841233/&#34;&gt;young-lh-756841233&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;Projects: &lt;a href=&#34;https://github.com/kgpp34?tab=repositories&#34;&gt;github.com/kgpp34?tab=repositories&lt;/a&gt;&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;h2 id=&#34;focus&#34;&gt;Focus&lt;/h2&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;云原生平台与基础设施&lt;/li&gt;&#xA;&lt;li&gt;在离线混部与业务发布&lt;/li&gt;&#xA;&lt;li&gt;调度器与资源管理&lt;/li&gt;&#xA;&lt;li&gt;可观测与 SRE&lt;/li&gt;&#xA;&lt;li&gt;LLM Infra&lt;/li&gt;&#xA;&lt;li&gt;Agent Sandbox Infra&lt;/li&gt;&#xA;&lt;/ul&gt;</description>
+			</item>
+			<item>
+				<title>Projects</title>
+				<link>https://kgpp34.github.io/projects/</link>
+				<pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+				<guid>https://kgpp34.github.io/projects/</guid>
+				<description>&lt;h2 id=&#34;selected-projects&#34;&gt;Selected projects&lt;/h2&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;&lt;a href=&#34;https://github.com/kgpp34/KumaBox&#34;&gt;KumaBox&lt;/a&gt;: agent sandbox runtime。&lt;/li&gt;&#xA;&lt;li&gt;&lt;a href=&#34;https://github.com/kgpp34/rag-core-int&#34;&gt;rag-core-int&lt;/a&gt;: 基于 JDK 25 的高性能 RAG 检索引擎。&lt;/li&gt;&#xA;&lt;/ul&gt;</description>
 			</item>
 	</channel>
 </rss>

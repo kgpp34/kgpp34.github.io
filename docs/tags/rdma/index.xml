@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+	<channel>
+		<title>RDMA on kgpp34 space</title>
+		<link>https://kgpp34.github.io/tags/rdma/</link>
+		<description>Recent content in RDMA on kgpp34 space</description>
+		<generator>Hugo</generator>
+		<language>zh-CN</language>
+		
+		
+		
+		
+			<lastBuildDate>Thu, 20 Aug 2026 00:10:00 +0800</lastBuildDate>
+		
+			<atom:link href="https://kgpp34.github.io/tags/rdma/index.xml" rel="self" type="application/rss+xml" />
+			<item>
+				<title>eBPF 单机 SoftRoCE 抓包记录</title>
+				<link>https://kgpp34.github.io/posts/ebpf-%E5%8D%95%E6%9C%BA-softroce-%E6%8A%93%E5%8C%85%E8%AE%B0%E5%BD%95/</link>
+				<pubDate>Thu, 20 Aug 2026 00:10:00 +0800</pubDate>
+				<guid>https://kgpp34.github.io/posts/ebpf-%E5%8D%95%E6%9C%BA-softroce-%E6%8A%93%E5%8C%85%E8%AE%B0%E5%BD%95/</guid>
+				<description>&lt;h1 id=&#34;ebpf-单机-softroce-抓包记录&#34;&gt;eBPF 单机 SoftRoCE 抓包记录&lt;/h1&gt;&#xA;&lt;h2 id=&#34;一问题介绍&#34;&gt;一、问题介绍&lt;/h2&gt;&#xA;&lt;p&gt;最近在搞 &lt;em&gt;RDMA&lt;/em&gt; 相关的内容，为了更好的学习，就想在本机用 &lt;em&gt;SoftRoCE&lt;/em&gt; 抓包看看协议，但是在这过程中通过 &lt;em&gt;tcpdump&lt;/em&gt; 并没有抓到任何内容，反而是最后靠着 &lt;em&gt;eBPF&lt;/em&gt; hook 到内核函数，最终找到了这些数据包，下面是问题发现的过程。&lt;/p&gt;&#xA;&lt;p&gt;先简单交代下背景，方便没有接触过的同学：&lt;em&gt;RDMA&lt;/em&gt;（Remote Direct Memory Access，远程直接内存访问）能让网卡&lt;strong&gt;直接读写远端内存&lt;/strong&gt;，数据不用双方 CPU 一遍遍搬运，是高带宽低延迟场景（HPC、分布式存储、GPU 分布式训练）的核心技术。&lt;em&gt;RoCEv2&lt;/em&gt; 是它最常见的落地形态——把 RDMA 报文装进 &lt;strong&gt;UDP（目的端口固定 4791）&lt;/strong&gt; 再走 IP。而 &lt;em&gt;SoftRoCE&lt;/em&gt;（内核模块名 &lt;code&gt;rxe&lt;/code&gt;）是 Linux 自带的&lt;strong&gt;纯软件 RDMA 实现&lt;/strong&gt;，没有 RDMA 网卡也能把整套协议跑起来，正好用来学习。&lt;/p&gt;&#xA;&lt;h3 id=&#34;环境&#34;&gt;环境&lt;/h3&gt;&#xA;&lt;p&gt;要在本机（无实际的 &lt;em&gt;RDMA&lt;/em&gt; 设备）抓包看 RDMA 协议，普遍的做法是使用 &lt;em&gt;SoftRoCE&lt;/em&gt; 来通过内核模拟，我的测试环境是一台 Ubuntu 24.04 虚拟机（ARM64），内核版本是 &lt;strong&gt;6.8.0-137&lt;/strong&gt;，装了 rdma-core；并且 &lt;em&gt;rxe0&lt;/em&gt; 设备挂在回环口 &lt;em&gt;lo&lt;/em&gt; 上。&lt;/p&gt;&#xA;&lt;pre&gt;&lt;code&gt;xxxxxxx@ubuntu:~$ rdma link show &#xA;link rxe0/1 state ACTIVE physical_state LINK_UP netdev lo&#xA;&lt;/code&gt;&lt;/pre&gt;&#xA;&lt;p&gt;实验的时候用了经典的 &lt;code&gt;ibv_rc_pingpong&lt;/code&gt; 来做测试，即 client 和 server 端各建一个 QP，互相发 1024 字节的数据包，共 50 次迭代。&lt;/p&gt;</description>
+			</item>
+	</channel>
+</rss>

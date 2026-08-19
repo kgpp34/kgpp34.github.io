@@ -3,22 +3,52 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>http://localhost:1313/</loc>
+    <loc>https://kgpp34.github.io/tags/ebpf/</loc>
+    <lastmod>2026-08-20T00:10:00+08:00</lastmod>
+  </url><url>
+    <loc>https://kgpp34.github.io/posts/ebpf-%E5%8D%95%E6%9C%BA-softroce-%E6%8A%93%E5%8C%85%E8%AE%B0%E5%BD%95/</loc>
+    <lastmod>2026-08-20T00:10:00+08:00</lastmod>
+  </url><url>
+    <loc>https://kgpp34.github.io/</loc>
+    <lastmod>2026-08-20T00:10:00+08:00</lastmod>
+  </url><url>
+    <loc>https://kgpp34.github.io/posts/</loc>
+    <lastmod>2026-08-20T00:10:00+08:00</lastmod>
+  </url><url>
+    <loc>https://kgpp34.github.io/tags/rdma/</loc>
+    <lastmod>2026-08-20T00:10:00+08:00</lastmod>
+  </url><url>
+    <loc>https://kgpp34.github.io/tags/</loc>
+    <lastmod>2026-08-20T00:10:00+08:00</lastmod>
+  </url><url>
+    <loc>https://kgpp34.github.io/tags/%E7%BD%91%E7%BB%9C/</loc>
+    <lastmod>2026-08-20T00:10:00+08:00</lastmod>
+  </url><url>
+    <loc>https://kgpp34.github.io/tags/etcd/</loc>
+    <lastmod>2026-06-16T17:00:00+08:00</lastmod>
+  </url><url>
+    <loc>https://kgpp34.github.io/posts/etcd-raft-02.md/</loc>
+    <lastmod>2026-06-16T17:00:00+08:00</lastmod>
+  </url><url>
+    <loc>https://kgpp34.github.io/tags/%E5%AD%98%E5%82%A8/</loc>
+    <lastmod>2026-06-16T17:00:00+08:00</lastmod>
+  </url><url>
+    <loc>https://kgpp34.github.io/tags/k8s/</loc>
     <lastmod>2026-06-11T16:50:00+08:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/posts/k8s-multiple-cni-solution-multus/</loc>
+    <loc>https://kgpp34.github.io/posts/k8s-multiple-cni-solution-multus/</loc>
     <lastmod>2026-06-11T16:50:00+08:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/posts/</loc>
+    <loc>https://kgpp34.github.io/tags/llm-infra/</loc>
     <lastmod>2026-06-11T16:50:00+08:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/posts/etcd-raft-01/</loc>
+    <loc>https://kgpp34.github.io/posts/etcd-raft-01/</loc>
     <lastmod>2026-06-01T15:43:52+08:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/about/</loc>
+    <loc>https://kgpp34.github.io/about/</loc>
   </url><url>
-    <loc>http://localhost:1313/categories/</loc>
+    <loc>https://kgpp34.github.io/categories/</loc>
   </url><url>
-    <loc>http://localhost:1313/tags/</loc>
+    <loc>https://kgpp34.github.io/projects/</loc>
   </url>
 </urlset>
