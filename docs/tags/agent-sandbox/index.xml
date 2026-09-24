@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+	<channel>
+		<title>Agent Sandbox on kgpp34 space</title>
+		<link>http://localhost:1313/tags/agent-sandbox/</link>
+		<description>Recent content in Agent Sandbox on kgpp34 space</description>
+		<generator>Hugo</generator>
+		<language>zh-CN</language>
+		
+		
+		
+		
+			<lastBuildDate>Thu, 24 Sep 2026 14:44:10 +0800</lastBuildDate>
+		
+			<atom:link href="http://localhost:1313/tags/agent-sandbox/index.xml" rel="self" type="application/rss+xml" />
+			<item>
+				<title>论文笔记：DSec——DeepSeek 的 Agent 沙箱基础设施</title>
+				<link>http://localhost:1313/posts/dsec-agent-sandbox-infra/</link>
+				<pubDate>Thu, 24 Sep 2026 14:44:10 +0800</pubDate>
+				<guid>http://localhost:1313/posts/dsec-agent-sandbox-infra/</guid>
+				<description>&lt;h1 id=&#34;论文笔记dsecdeepseek-的-agent-沙箱基础设施&#34;&gt;论文笔记：DSec——DeepSeek 的 Agent 沙箱基础设施&lt;/h1&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;论文：&lt;a href=&#34;https://arxiv.org/pdf/2609.22978v1&#34;&gt;DeepSeek Elastic Compute (DSec): A Sandbox Infrastructure for Effective Agentic Training at Scale&lt;/a&gt;&lt;/p&gt;&#xA;&lt;/blockquote&gt;&#xA;&lt;h2 id=&#34;写在前面&#34;&gt;写在前面&lt;/h2&gt;&#xA;&lt;p&gt;近半年来，各大模型厂的 LLM 能力不断提升，而后训练和 RL 在这一阶段直接决定了模型在实际任务中的能力，如何保证一个大规模 RL 系统稳定、高效地运行，就是 infra 团队要解决的问题。这篇论文讲了 DeepSeek 内部的沙箱平台 DSec，看完以后发现其实很多思路都是业界最近一段时期普遍的一些做法。&lt;/p&gt;&#xA;&lt;p&gt;论文里提到，DSec 单个规模单元大概是：&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;大约 160 台 CPU 节点、3 万个核、250 TB 左右内存。&lt;/li&gt;&#xA;&lt;li&gt;每天跑大约 300 万个沙箱，峰值同时存活约 38 万个，峰值创建速度每秒 5000 个以上&lt;/li&gt;&#xA;&lt;li&gt;单机稳定跑过 3200 个容器或 800 个 microVM&lt;/li&gt;&#xA;&lt;li&gt;单个任务最多一次要 3.2 万个沙箱。&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;p&gt;这种量级的 Agent 沙箱环境是一般中小型公司接触不到的，而 DeepSeek 团队把这些做法系统化地整理成了这篇技术报告，对于很多基架团队是有一些工程上的借鉴意义的。&lt;/p&gt;&#xA;&lt;h3 id=&#34;先看全貌&#34;&gt;先看全貌&lt;/h3&gt;&#xA;&lt;p&gt;这篇文章会比较长，所以先把整篇论文的逻辑理一遍，文章后面说的每一部分都挂在这条线上。&lt;/p&gt;&#xA;&lt;p&gt;论文的主线其实很清楚：先讲 Agent 沙箱这种负载有多特殊，再讲为了承接它搭了一个什么样的平台，然后用生产数据把负载拆成三个具体挑战，每个挑战对应一套核心机制，最后讲平台怎么和 RL 训练框架配合，以及 Agent 在沙箱里作弊的问题怎么防。&lt;/p&gt;</description>
+			</item>
+	</channel>
+</rss>
